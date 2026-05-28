@@ -18,3 +18,23 @@ v1.0.0
 
 * 点击 start.bat 即可运行
 
+## 运行界面
+
+* 首页
+
+![](doc/home.png)
+
+* 添加站点
+
+![](doc/add-website.png)
+
+* 列表
+
+![](doc/list.png)
+
+* 支持导出和导入
+
+* 支持国际化（中文和English)
+
+![](doc/i18n.png)
+
