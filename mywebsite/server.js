@@ -29,6 +29,7 @@ function readData() {
     return data;
   } catch {
     // 如果文件不存在或解析失败，创建默认数据
+    // 这里使用中文作为默认语言，前端会根据用户选择切换
     const defaultData = { 
       title: '我的收藏地址', 
       iconSize: 'medium', 
@@ -335,7 +336,7 @@ const server = http.createServer((req, res) => {
           
           writeData(currentData);
           console.log('Data with tabs imported successfully');
-          res.end(JSON.stringify({ code: 0, message: '数据导入成功！' }));
+          res.end(JSON.stringify({ code: 0 }));
         } 
         // 如果导入的数据只有links（旧格式），则添加到当前tab
         else if (importedData.links && Array.isArray(importedData.links)) {
@@ -457,7 +458,7 @@ const server = http.createServer((req, res) => {
         // 至少保留一个tab
         if (data.tabs.length <= 1) {
           res.statusCode = 400;
-          res.end(JSON.stringify({ code: 1, message: '至少需要保留一个选项卡' }));
+          res.end(JSON.stringify({ code: 1, messageKey: 'atLeastOneTab' }));
           return;
         }
         
@@ -473,7 +474,11 @@ const server = http.createServer((req, res) => {
         // 检查是否有站点
         if (tabToDelete.links && tabToDelete.links.length > 0) {
           res.statusCode = 400;
-          res.end(JSON.stringify({ code: 1, message: `该选项卡中有${tabToDelete.links.length}个站点，请先清空后再删除` }));
+          res.end(JSON.stringify({ 
+            code: 1, 
+            messageKey: 'tabHasLinks',
+            linkCount: tabToDelete.links.length
+          }));
           return;
         }
         
