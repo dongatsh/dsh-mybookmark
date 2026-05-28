@@ -3,7 +3,17 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 
-const PORT = 8080;
+// 读取配置文件
+const CONFIG_FILE = path.join(__dirname, 'config.json');
+let config;
+try {
+  config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+} catch (err) {
+  console.warn('配置文件加载失败，使用默认配置');
+  config = { port: 8080 };
+}
+
+const PORT = config.port || 8080;
 const DATA_FILE = path.join(__dirname, 'mywebsite.json');
 
 // 读取数据
