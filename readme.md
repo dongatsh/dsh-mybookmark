@@ -1,4 +1,4 @@
-# 我的收藏地址 My Website
+# 我的收藏地址 My Bookmark
 
 ![](doc/favicon_middle.png)
 
@@ -18,7 +18,7 @@ v1.0.0
 
 ## 安装
 
-* 下载文件 mywebsite 文件
+* 下载文件 mybookmark 文件
 
 * 点击 start.bat 即可运行
 
@@ -28,7 +28,7 @@ v1.0.0
 
 ## 修改端口
 
-* 修改 mywebsite/config.json 文件
+* 修改 mybookmark/config.json 文件
 
 ```json
     {
