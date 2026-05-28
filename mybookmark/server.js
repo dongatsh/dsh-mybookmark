@@ -14,7 +14,7 @@ try {
 }
 
 const PORT = config.port || 8080;
-const DATA_FILE = path.join(__dirname, 'mywebsite.json');
+const DATA_FILE = path.join(__dirname, 'mybookmark.json');
 
 // 读取数据
 function readData() {

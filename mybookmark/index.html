@@ -285,7 +285,7 @@
             },
             en: {
                 pageTitle: 'My Bookmarks',
-                defaultTitle: 'My Website',
+                defaultTitle: 'My Bookmarks',
                 defaultTabName: 'My Favorite Sites',
                 largeIcon: 'Large',
                 mediumIcon: 'Medium',
@@ -1024,7 +1024,7 @@
                     let displayTitle = data.title;
                     if (data.title === '我的收藏地址' && currentLanguage === 'en') {
                         displayTitle = t('defaultTitle');
-                    } else if (data.title === 'My Website' && currentLanguage === 'zh') {
+                    } else if (data.title === 'My Bookmark' && currentLanguage === 'zh') {
                         displayTitle = t('defaultTitle');
                     }
                     document.getElementById('pageTitle').textContent = displayTitle;
@@ -1206,7 +1206,7 @@
                 // 创建下载链接
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `mywebsite_backup_${new Date().getTime()}.json`;
+                a.download = `mybookmark_backup_${new Date().getTime()}.json`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -1435,7 +1435,7 @@
     
     <!-- Footer -->
     <div class="footer">
-        (c) DSH-MyWebsite v1.0.0
+        (c) DSH-MyBookmark v1.0.0
     </div>
     
     <!-- Toast Container -->
