@@ -12,7 +12,7 @@ function readData() {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
     // 如果是旧格式（数组），转换为新格式
     if (Array.isArray(data)) {
-      return { title: '本地网址收藏工具', iconSize: 'medium', tabs: [{ id: Date.now(), name: '我的常用站点', links: data }] };
+      return { title: '我的收藏地址', iconSize: 'medium', tabs: [{ id: 1, name: '我的常用站点', links: data }] };
     }
     // 确保有默认值
     if (!data.iconSize) {
@@ -20,7 +20,7 @@ function readData() {
     }
     // 如果没有tabs，创建默认的tab
     if (!data.tabs || !Array.isArray(data.tabs) || data.tabs.length === 0) {
-      data.tabs = [{ id: Date.now(), name: '我的常用站点', links: data.links || [] }];
+      data.tabs = [{ id: 1, name: '我的常用站点', links: data.links || [] }];
     }
     // 确保有currentTabId
     if (!data.currentTabId && data.tabs.length > 0) {
@@ -28,7 +28,16 @@ function readData() {
     }
     return data;
   } catch {
-    return { title: '本地网址收藏工具', iconSize: 'medium', tabs: [{ id: Date.now(), name: '我的常用站点', links: [] }] };
+    // 如果文件不存在或解析失败，创建默认数据
+    const defaultData = { 
+      title: '我的收藏地址', 
+      iconSize: 'medium', 
+      currentTabId: 1,
+      tabs: [{ id: 1, name: '我的常用站点', links: [] }] 
+    };
+    // 立即写入默认数据到文件
+    writeData(defaultData);
+    return defaultData;
   }
 }
 
@@ -271,50 +280,102 @@ const server = http.createServer((req, res) => {
       try {
         const importedData = JSON.parse(body);
         console.log('Importing data...');
-        // 验证数据结构
-        if (!importedData.links || !Array.isArray(importedData.links)) {
+        
+        // 验证数据结构 - 支持两种格式：旧的只有links的格式和新的包含tabs的格式
+        if (!importedData.tabs && !importedData.links) {
           res.statusCode = 400;
           res.end(JSON.stringify({ code: 1, message: 'Invalid data format' }));
           return;
         }
         
         const currentData = readData();
-        const currentTab = currentData.tabs.find(t => t.id === currentData.currentTabId);
         
-        if (!currentTab) {
-          res.statusCode = 404;
-          res.end(JSON.stringify({ code: 1, message: 'Current tab not found' }));
-          return;
-        }
-        
-        // 获取当前tab已有的 URL 列表（用于去重）
-        const existingUrls = new Set(currentTab.links.map(link => link.url));
-        
-        // 过滤掉已存在的 URL，只保留新的
-        const newLinks = [];
-        let duplicateCount = 0;
-        
-        importedData.links.forEach(link => {
-          if (!existingUrls.has(link.url)) {
-            // 生成新的ID避免冲突
-            link.id = Date.now() + Math.random();
-            newLinks.push(link);
-            existingUrls.add(link.url); // 添加到集合中，防止导入数据内部重复
-          } else {
-            duplicateCount++;
+        // 如果导入的数据包含tabs结构
+        if (importedData.tabs && Array.isArray(importedData.tabs)) {
+          console.log('Importing with tabs structure');
+          
+          // 合并tabs：对于每个导入的tab，检查是否已存在（根据id）
+          importedData.tabs.forEach(importedTab => {
+            // 查找当前数据中是否已存在相同id的tab
+            const existingTab = currentData.tabs.find(t => t.id === importedTab.id);
+            
+            if (existingTab) {
+              // 如果tab已存在，合并links（基于ID去重）
+              const existingIds = new Set(existingTab.links.map(link => link.id));
+              
+              importedTab.links.forEach(link => {
+                if (!existingIds.has(link.id)) {
+                  existingTab.links.push(link);
+                  existingIds.add(link.id);
+                }
+              });
+            } else {
+              // 如果tab不存在，添加新tab
+              currentData.tabs.push(importedTab);
+            }
+          });
+          
+          // 更新标题（如果导入数据中有）
+          if (importedData.title) {
+            currentData.title = importedData.title;
           }
-        });
-        
-        console.log(`Importing ${newLinks.length} new links, skipping ${duplicateCount} duplicates`);
-        
-        // 合并数据到当前tab
-        currentTab.links = [...currentTab.links, ...newLinks];
-        if (importedData.title) {
-          currentData.title = importedData.title;
+          
+          // 更新图标大小（如果导入数据中有）
+          if (importedData.iconSize) {
+            currentData.iconSize = importedData.iconSize;
+          }
+          
+          // 确保currentTabId有效
+          if (importedData.currentTabId) {
+            const tabExists = currentData.tabs.find(t => t.id === importedData.currentTabId);
+            if (tabExists) {
+              currentData.currentTabId = importedData.currentTabId;
+            }
+          }
+          
+          writeData(currentData);
+          console.log('Data with tabs imported successfully');
+          res.end(JSON.stringify({ code: 0, message: '数据导入成功！' }));
+        } 
+        // 如果导入的数据只有links（旧格式），则添加到当前tab
+        else if (importedData.links && Array.isArray(importedData.links)) {
+          console.log('Importing with legacy links-only format');
+          
+          const currentTab = currentData.tabs.find(t => t.id === currentData.currentTabId);
+          
+          if (!currentTab) {
+            res.statusCode = 404;
+            res.end(JSON.stringify({ code: 1, message: 'Current tab not found' }));
+            return;
+          }
+          
+          // 获取当前tab已有的 ID 列表（用于去重）
+          const existingIds = new Set(currentTab.links.map(link => link.id));
+          
+          // 过滤掉已存在的 ID，只保留新的
+          const newLinks = [];
+          let duplicateCount = 0;
+          
+          importedData.links.forEach(link => {
+            if (!existingIds.has(link.id)) {
+              newLinks.push(link);
+              existingIds.add(link.id); // 添加到集合中，防止导入数据内部重复
+            } else {
+              duplicateCount++;
+            }
+          });
+          
+          console.log(`Importing ${newLinks.length} new links, skipping ${duplicateCount} duplicates`);
+          
+          // 合并数据到当前tab
+          currentTab.links = [...currentTab.links, ...newLinks];
+          if (importedData.title) {
+            currentData.title = importedData.title;
+          }
+          writeData(currentData);
+          console.log('Legacy data imported successfully');
+          res.end(JSON.stringify({ code: 0, added: newLinks.length, skipped: duplicateCount }));
         }
-        writeData(currentData);
-        console.log('Data imported successfully');
-        res.end(JSON.stringify({ code: 0, added: newLinks.length, skipped: duplicateCount }));
       } catch (err) {
         console.error('Import error:', err);
         res.statusCode = 500;
@@ -396,7 +457,7 @@ const server = http.createServer((req, res) => {
         // 至少保留一个tab
         if (data.tabs.length <= 1) {
           res.statusCode = 400;
-          res.end(JSON.stringify({ code: 1, message: '至少需要保留一个Tab' }));
+          res.end(JSON.stringify({ code: 1, message: '至少需要保留一个选项卡' }));
           return;
         }
         
@@ -412,7 +473,7 @@ const server = http.createServer((req, res) => {
         // 检查是否有站点
         if (tabToDelete.links && tabToDelete.links.length > 0) {
           res.statusCode = 400;
-          res.end(JSON.stringify({ code: 1, message: `该Tab中有${tabToDelete.links.length}个站点，请先清空后再删除` }));
+          res.end(JSON.stringify({ code: 1, message: `该选项卡中有${tabToDelete.links.length}个站点，请先清空后再删除` }));
           return;
         }
         

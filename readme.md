@@ -1,6 +1,6 @@
 # 我的收藏地址 My Website
 
-![](favicon_middle.png)
+![](doc/favicon_middle.png)
 
 ## 功能
 

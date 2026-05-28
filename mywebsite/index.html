@@ -195,7 +195,7 @@
     <!-- Move to Tab Modal -->
     <div class="modal-overlay" id="moveToTabModal">
         <div class="modal">
-            <h3>移动到目标Tab</h3>
+            <h3>移动到目标选项卡</h3>
             <select class="modal-input" id="targetTabSelect"></select>
             <div class="modal-buttons">
                 <button class="cancel-btn" onclick="closeMoveToTabModal()">取消</button>
@@ -253,7 +253,7 @@
                          ondragend="handleDragEnd(event)"
                          ondragover="handleDragOver(event)"
                          ondrop="handleDrop(event)">
-                        <button class="move-btn-icon" onclick="showMoveToTabModal(${item.id})" title="移动到其它Tab">⇄</button>
+                        <button class="move-btn-icon" onclick="showMoveToTabModal(${item.id})" title="移动到其它选项卡">⇄</button>
                         <div class="link-icon ${iconClass}" style="background-image: url('${favicon}'); background-size: cover; background-position: center;">
                             <span style="${hasFavicon(favicon) ? 'display:none' : ''}">${firstChar}</span>
                         </div>
@@ -275,7 +275,7 @@
                          ondragend="handleDragEnd(event)"
                          ondragover="handleDragOver(event)"
                          ondrop="handleDrop(event)">
-                        <button class="move-btn-icon" onclick="showMoveToTabModal(${item.id})" title="移动到其它Tab">⇄</button>
+                        <button class="move-btn-icon" onclick="showMoveToTabModal(${item.id})" title="移动到其它选项卡">⇄</button>
                         <div class="link-icon ${iconClass}" style="background-image: url('${favicon}'); background-size: cover; background-position: center;">
                             <span style="${hasFavicon(favicon) ? 'display:none' : ''}">${firstChar}</span>
                         </div>
@@ -318,7 +318,7 @@
         function calculateNextTabNumber(tabs) {
             let maxNum = 1;
             tabs.forEach(tab => {
-                const match = tab.name.match(/^Tab#(\d+)$/);
+                const match = tab.name.match(/^选项卡#(\d+)$/);
                 if (match) {
                     const num = parseInt(match[1]);
                     if (num > maxNum) {
@@ -349,7 +349,7 @@
                 `;
             });
             
-            html += '<button class="add-tab-btn" onclick="addTab()">+ 添加Tab</button>';
+            html += '<button class="add-tab-btn" onclick="addTab()">+ 添加选项卡</button>';
             header.innerHTML = html;
             
             // 为每个 Tab 绑定事件
@@ -405,7 +405,7 @@
                     updateTabName(tabId, newName);
                 } else if (!newName) {
                     // 如果名称为空，恢复原名称
-                    showToast('Tab名称不能为空', 'warning');
+                    showToast('选项卡名称不能为空', 'warning');
                     input.replaceWith(createTabNameElement(currentName, tabId));
                 } else {
                     // 名称未改变，恢复原样
@@ -448,7 +448,7 @@
                 loadTabs();
             } catch (error) {
                 console.error('Update tab name error:', error);
-                showToast('更新Tab名称失败', 'error');
+                showToast('更新选项卡名称失败', 'error');
             }
         }
 
@@ -467,9 +467,9 @@
         // 添加 Tab
         async function addTab() {
             // 使用递增的序号作为默认名称
-            const defaultName = `Tab#${nextTabNumber}`;
+            const defaultName = `选项卡#${nextTabNumber}`;
             
-            customPrompt('请输入Tab名称：', defaultName, async (name) => {
+            customPrompt('请输入选项卡名称：', defaultName, async (name) => {
                 if (!name || !name.trim()) return;
                 
                 try {
@@ -500,13 +500,13 @@
                         // 重新加载 Tabs 和 Links
                         await loadTabs();
                         await loadLinks();
-                        showToast('Tab添加成功', 'success');
+                        showToast('选项卡添加成功', 'success');
                     } else {
-                        showToast(result.message || '添加Tab失败', 'error');
+                        showToast(result.message || '添加选项卡失败', 'error');
                     }
                 } catch (error) {
                     console.error('Add tab error:', error);
-                    showToast('添加Tab失败', 'error');
+                    showToast('添加选项卡失败', 'error');
                 }
             });
         }
@@ -515,7 +515,7 @@
         async function deleteTab(tabId, event) {
             event.stopPropagation();
             
-            customConfirm('确定要删除这个Tab吗？', async (confirmed) => {
+            customConfirm('确定要删除这个选项卡吗？', async (confirmed) => {
                 if (!confirmed) return;
                 
                 try {
@@ -529,13 +529,13 @@
                     if (result.code === 0) {
                         loadTabs();
                         loadLinks();
-                        showToast('Tab删除成功', 'success');
+                        showToast('选项卡删除成功', 'success');
                     } else {
                         showToast(result.message || '删除失败', 'error');
                     }
                 } catch (error) {
                     console.error('Delete tab error:', error);
-                    showToast('删除Tab失败', 'error');
+                    showToast('删除选项卡失败', 'error');
                 }
             });
         }
@@ -999,8 +999,22 @@
                 const text = await file.text();
                 const data = JSON.parse(text);
                 
+                // 计算要导入的项目数量
+                let itemCount = 0;
+                if (data.tabs && Array.isArray(data.tabs)) {
+                    // 新格式：统计所有tabs中的links总数
+                    data.tabs.forEach(tab => {
+                        if (tab.links && Array.isArray(tab.links)) {
+                            itemCount += tab.links.length;
+                        }
+                    });
+                } else if (data.links && Array.isArray(data.links)) {
+                    // 旧格式：直接统计links数量
+                    itemCount = data.links.length;
+                }
+                
                 // 确认导入
-                customConfirm(`确定要导入 ${data.links ? data.links.length : 0} 个收藏吗？这将与现有数据合并。`, async (confirmed) => {
+                customConfirm(`确定要导入 ${itemCount} 个收藏吗？这将与现有数据合并。`, async (confirmed) => {
                     if (!confirmed) {
                         event.target.value = ''; // 清空文件选择
                         return;
@@ -1019,9 +1033,13 @@
                     let message = '导入成功！';
                     if (result.added !== undefined && result.skipped !== undefined) {
                         message = `导入完成！\n新增：${result.added} 个\n跳过重复：${result.skipped} 个`;
+                    } else if (result.message) {
+                        message = result.message;
                     }
                     showToast(message, 'success');
-                    loadLinks(); // 重新加载列表
+                    // 重新加载整个页面数据（包括tabs和links）
+                    await loadTabs();
+                    await loadLinks();
                 } else {
                     showToast('导入失败：' + (result.message || '未知错误'), 'error');
                 }
