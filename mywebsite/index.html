@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="favicon.png">
+    <title>我的网址收藏</title>
+    <style>
+        * {margin: 0;padding: 0;box-sizing: border-box;font-family: Arial, sans-serif;}
+        body {max-width: 1200px;margin: 30px auto;padding: 0 20px;background: #f5f7fa;}
+        .title-container {text-align: center;margin-bottom: 30px;position: relative;}
+        .title {color: #2d3748;font-size: 26px;display: inline-block;cursor: pointer;padding: 10px 20px;border-radius: 8px;transition: background 0.3s;}
+        .title:hover {background: rgba(66, 153, 225, 0.1);}
+        .title-edit {display: none;padding: 10px 20px;font-size: 26px;text-align: center;border: 2px solid #4299e1;border-radius: 8px;outline: none;width: 100%;max-width: 500px;}
+        .add-box {background: #fff;padding: 20px;border-radius: 10px;box-shadow: 0 2px 10px rgba(0,0,0,0.1);margin-bottom: 25px;display: flex;gap: 10px;flex-wrap: wrap;}
+        input[type="text"], input[type="url"] {flex: 1;min-width: 150px;padding: 12px 15px;border: 1px solid #e2e8f0;border-radius: 6px;font-size: 14px;outline: none;}
+        input:focus {border-color: #4299e1;}
+        button {padding: 12px 20px;background: #4299e1;color: #fff;border: none;border-radius: 6px;cursor: pointer;font-size: 14px;}
+        button:hover {background: #3182ce;}
+        .link-grid {display: grid;grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));gap: 20px;}
+        .link-card {background: #fff;border-radius: 10px;box-shadow: 0 2px 10px rgba(0,0,0,0.1);padding: 20px;text-align: center;transition: transform 0.2s, box-shadow 0.2s;position: relative;cursor: move;margin-top: 10px;overflow: visible;}
+        .link-card:hover {transform: translateY(-5px);box-shadow: 0 4px 15px rgba(0,0,0,0.15);z-index: 10;}
+        .link-card.dragging {opacity: 0.5;transform: scale(0.95);}
+        .link-card.drag-over {border: 2px dashed #4299e1;}
+        /* 图标大小样式 */
+        .link-icon.large {width: 96px;height: 96px;font-size: 42px;}
+        .link-icon.medium {width: 64px;height: 64px;font-size: 28px;}
+        .link-icon.small {width: 32px;height: 32px;font-size: 14px;display: inline-flex;vertical-align: middle;margin-right: 8px;margin-bottom: 0;}
+        /* 小图标模式下卡片布局 */
+        .link-card.small-icon-mode {display: flex;align-items: center;text-align: left;padding: 15px 20px;gap: 12px;}
+        .link-card.small-icon-mode .link-icon {margin: 0;flex-shrink: 0;}
+        .link-card.small-icon-mode .card-content {flex: 1;min-width: 0;}
+        .link-card.small-icon-mode .link-name {margin-bottom: 4px;}
+        .link-card.small-icon-mode .link-url {margin-bottom: 0;max-height: none;overflow: visible;}
+        .link-card.small-icon-mode .card-actions {margin-left: auto;flex-shrink: 0;}
+        /* 无图标时按钮悬停显示 */
+        .link-card.no-icon .card-actions {opacity: 0;visibility: hidden;transition: opacity 0.3s, visibility 0.3s;}
+        .link-card.no-icon:hover .card-actions {opacity: 1;visibility: visible;}
+        /* 所有卡片默认隐藏按钮区域 */
+        .link-card .card-actions {opacity: 0;visibility: hidden;transition: opacity 0.3s, visibility 0.3s;position: absolute;bottom: -50px;left: 0;right: 0;background: rgba(255,255,255,0.95);padding: 10px;border-radius: 0 0 10px 10px;box-shadow: 0 4px 12px rgba(0,0,0,0.1);}
+        .link-card:hover .card-actions {opacity: 1;visibility: visible;}
+        /* 移动按钮 - 右上角小图标 */
+        .move-btn-icon {position: absolute;top: 8px;right: 8px;width: 24px;height: 24px;padding: 0;background: #805ad5;color: #fff;border: none;border-radius: 50%;cursor: pointer;font-size: 12px;display: flex;align-items: center;justify-content: center;transition: all 0.3s;z-index: 10;opacity: 0;}
+        .link-card:hover .move-btn-icon {opacity: 1;}
+        .move-btn-icon:hover {background: #6b46c1;transform: scale(1.1);}
+        .link-card.no-icon .move-btn-icon {opacity: 0;}
+        .link-card.no-icon:hover .move-btn-icon {opacity: 1;}
+        /* URL链接样式 */
+        .link-url a {color: #718096;text-decoration: none;word-break: break-all;}
+        .link-url a:hover {color: #4299e1;text-decoration: underline;}
+        /* 图标大小按钮样式 */
+        .icon-size-buttons {display: flex;gap: 8px;align-items: center;}
+        .icon-size-btn {padding: 10px 15px;border: 2px solid #e2e8f0;background: #fff;border-radius: 6px;cursor: pointer;font-size: 13px;transition: all 0.3s;color: #4a5568;}
+        .icon-size-btn:hover {border-color: #4299e1;background: #ebf8ff;color: #2b6cb0;}
+        .icon-size-btn.active {border-color: #4299e1;background: #4299e1;color: #fff;}
+        .link-icon {width: 64px;height: 64px;margin: 0 auto 15px;border-radius: 12px;display: flex;align-items: center;justify-content: center;font-size: 28px;background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);color: #fff;}
+        .link-name {font-weight: bold;color: #2d3748;margin-bottom: 8px;font-size: 14px;word-break: break-word;}
+        .link-url {color: #718096;font-size: 11px;word-break: break-all;margin-bottom: 15px;max-height: 30px;overflow: hidden;}
+        .card-actions {display: flex;gap: 8px;justify-content: center;}
+        .card-btn {padding: 8px 12px;font-size: 12px;border-radius: 5px;}
+        .open-btn {background: #38a169;}
+        .open-btn:hover {background: #2f855a;}
+        .edit-btn {background: #ed8936;}
+        .edit-btn:hover {background: #dd6b20;}
+        .del-btn {background: #e53e3e;}
+        .del-btn:hover {background: #c53030;}
+        .empty {text-align: center;padding: 60px 20px;color: #a0aec0;grid-column: 1 / -1;}
+        
+        /* Edit Modal */
+        .modal-overlay {display: none;position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: rgba(0,0,0,0.5);z-index: 1000;align-items: center;justify-content: center;}
+        .modal {background: #fff;padding: 30px;border-radius: 12px;box-shadow: 0 4px 20px rgba(0,0,0,0.2);max-width: 500px;width: 90%;}
+        .modal h3 {margin-bottom: 20px;color: #2d3748;}
+        .modal-input {width: 100%;padding: 12px;margin-bottom: 15px;border: 1px solid #e2e8f0;border-radius: 6px;font-size: 14px;outline: none;}
+        .modal-input:focus {border-color: #4299e1;}
+        .modal-buttons {display: flex;gap: 10px;justify-content: flex-end;}
+        .cancel-btn {background: #718096;}
+        .cancel-btn:hover {background: #4a5568;}
+        .save-btn {background: #4299e1;}
+        .save-btn:hover {background: #3182ce;}
+        
+        /* Custom Toast Notification */
+        .toast-container {position: fixed;top: 20px;right: 20px;z-index: 10000;display: flex;flex-direction: column;gap: 10px;}
+        .toast {padding: 15px 20px;border-radius: 8px;color: #fff;font-size: 14px;box-shadow: 0 4px 12px rgba(0,0,0,0.15);animation: slideIn 0.3s ease-out;min-width: 250px;max-width: 400px;display: flex;align-items: center;gap: 10px;}
+        .toast.success {background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);}
+        .toast.error {background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);}
+        .toast.warning {background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);}
+        .toast.info {background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);}
+        @keyframes slideIn {
+            from {transform: translateX(400px);opacity: 0;}
+            to {transform: translateX(0);opacity: 1;}
+        }
+        @keyframes slideOut {
+            from {transform: translateX(0);opacity: 1;}
+            to {transform: translateX(400px);opacity: 0;}
+        }
+        .toast.hiding {animation: slideOut 0.3s ease-in forwards;}
+        
+        /* Custom Confirm Dialog */
+        .confirm-overlay {display: none;position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: rgba(0,0,0,0.5);z-index: 9999;align-items: center;justify-content: center;}
+        .confirm-dialog {background: #fff;padding: 30px;border-radius: 12px;box-shadow: 0 4px 20px rgba(0,0,0,0.2);max-width: 400px;width: 90%;text-align: center;}
+        .confirm-message {margin-bottom: 25px;color: #2d3748;font-size: 15px;line-height: 1.6;}
+        .confirm-buttons {display: flex;gap: 12px;justify-content: center;}
+        .confirm-btn {padding: 10px 24px;border: none;border-radius: 6px;cursor: pointer;font-size: 14px;transition: all 0.3s;}
+        .confirm-cancel {background: #e2e8f0;color: #4a5568;}
+        .confirm-cancel:hover {background: #cbd5e0;}
+        .confirm-ok {background: #4299e1;color: #fff;}
+        .confirm-ok:hover {background: #3182ce;}
+        
+        /* Custom Prompt Dialog */
+        .prompt-overlay {display: none;position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: rgba(0,0,0,0.5);z-index: 9999;align-items: center;justify-content: center;}
+        .prompt-dialog {background: #fff;padding: 30px;border-radius: 12px;box-shadow: 0 4px 20px rgba(0,0,0,0.2);max-width: 450px;width: 90%;}
+        .prompt-title {margin-bottom: 15px;color: #2d3748;font-size: 16px;font-weight: bold;}
+        .prompt-input {width: 100%;padding: 12px;margin-bottom: 20px;border: 2px solid #e2e8f0;border-radius: 6px;font-size: 14px;outline: none;transition: border-color 0.3s;}
+        .prompt-input:focus {border-color: #4299e1;}
+        
+        /* Tab Styles - Traditional Style */
+        .tab-container {margin-bottom: 0;}
+        .tab-header {display: flex;align-items: flex-end;gap: 2px;background: transparent;padding: 0 15px;border-bottom: 2px solid #e2e8f0;overflow-x: auto;}
+        .tab-item {padding: 12px 24px;background: #e2e8f0;border-radius: 8px 8px 0 0;cursor: pointer;font-size: 14px;color: #4a5568;transition: all 0.3s;white-space: nowrap;display: flex;align-items: center;gap: 8px;user-select: none;border: 1px solid #cbd5e0;border-bottom: none;margin-bottom: -2px;position: relative;}
+        .tab-item:hover {background: #cbd5e0;}
+        .tab-item.active {background: #fff;color: #2d3748;border-color: #e2e8f0;font-weight: bold;z-index: 1;}
+        .tab-item.dragging {opacity: 0.5;}
+        .tab-item.drag-over {border-top: 3px solid #4299e1;}
+        .tab-name {cursor: pointer;padding: 2px 5px;border-radius: 3px;}
+        .tab-name:hover {background: rgba(0,0,0,0.1);}
+        .tab-name-input {padding: 2px 5px;font-size: 14px;border: 1px solid #4299e1;border-radius: 3px;outline: none;width: 100px;}
+        .tab-close {width: 18px;height: 18px;border-radius: 50%;display: flex;align-items: center;justify-content: center;font-size: 12px;transition: background 0.2s;margin-left: 5px;}
+        .tab-close:hover {background: rgba(0,0,0,0.2);color: #fff;}
+        .add-tab-btn {padding: 12px 20px;background: transparent;color: #4299e1;border: 2px dashed #cbd5e0;border-radius: 8px 8px 0 0;cursor: pointer;font-size: 14px;white-space: nowrap;margin-bottom: -2px;}
+        .add-tab-btn:hover {background: #ebf8ff;border-color: #4299e1;}
+        
+        /* Footer Copyright */
+        .footer {text-align: center;padding: 20px;color: #a0aec0;font-size: 11px;position: fixed;bottom: 0;left: 0;right: 0;background: rgba(255,255,255,0.9);border-top: 1px solid #e2e8f0;z-index: 100;}
+    </style>
+</head>
+<body>
+    <div class="title-container">
+        <h1 class="title" id="pageTitle" ondblclick="startEditTitle()">我的网址收藏</h1>
+        <input type="text" class="title-edit" id="titleEdit" onblur="saveTitle()" onkeypress="if(event.key==='Enter') saveTitle()">
+    </div>
+    <div class="add-box">
+        <div style="display: flex;justify-content: space-between;align-items: center;width: 100%;gap: 15px;">
+            <!-- 左侧：图标大小选择 -->
+            <div class="icon-size-buttons" style="margin: 0;">
+                <button class="icon-size-btn" id="btnLarge" onclick="setIconSize('large')">大图标</button>
+                <button class="icon-size-btn" id="btnMedium" onclick="setIconSize('medium')">中图标</button>
+                <button class="icon-size-btn" id="btnSmall" onclick="setIconSize('small')">小图标</button>
+            </div>
+            
+            <!-- 右侧：操作按钮 -->
+            <div style="display: flex;gap: 10px;flex-shrink: 0;">
+                <button onclick="openAddModal()" style="flex: 0 0 auto;">添加收藏</button>
+                <button onclick="exportData()" style="background: #805ad5;">导出数据</button>
+                <button onclick="document.getElementById('importFile').click()" style="background: #38b2ac;">导入数据</button>
+                <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab Container -->
+    <div class="tab-container">
+        <div class="tab-header" id="tabHeader"></div>
+    </div>
+    
+    <div class="link-grid" id="linkList">
+        <div class="empty">暂无收藏</div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <h3>编辑收藏</h3>
+            <input type="text" class="modal-input" id="editName" placeholder="网址名称（可为空）">
+            <input type="url" class="modal-input" id="editUrl" placeholder="完整网址 https://">
+            <div class="modal-buttons">
+                <button class="cancel-btn" onclick="closeEditModal()">取消</button>
+                <button class="save-btn" onclick="saveEdit()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Modal -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal">
+            <h3>添加收藏</h3>
+            <input type="text" class="modal-input" id="addName" placeholder="网址名称（可为空，将自动提取）">
+            <input type="url" class="modal-input" id="addUrl" placeholder="完整网址 https://" oninput="autoFillName()">
+            <div class="modal-buttons">
+                <button class="cancel-btn" onclick="closeAddModal()">取消</button>
+                <button class="save-btn" onclick="saveAddLink()">添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Move to Tab Modal -->
+    <div class="modal-overlay" id="moveToTabModal">
+        <div class="modal">
+            <h3>移动到目标Tab</h3>
+            <select class="modal-input" id="targetTabSelect"></select>
+            <div class="modal-buttons">
+                <button class="cancel-btn" onclick="closeMoveToTabModal()">取消</button>
+                <button class="save-btn" onclick="confirmMoveToTab()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载读取数据
+        window.onload = function() {
+            loadTitle();
+            loadTabs();
+            loadLinks();
+        };
+
+        let currentEditId = null;
+        let draggedElement = null;
+        let currentIconSize = 'medium';
+        let currentTabId = null;
+        let draggedTabElement = null;
+        let movingLinkId = null;
+        let nextTabNumber = 2; // Tab 序号计数器
+        let confirmCallback = null;
+        let promptCallback = null;
+
+        // 读取列表
+        async function loadLinks() {
+            const res = await fetch('/api/get');
+            const data = await res.json();
+            const list = data.links || [];
+            currentIconSize = data.iconSize || 'medium';
+            
+            // 更新按钮状态
+            updateIconSizeButtons();
+            
+            const el = document.getElementById('linkList');
+            if (list.length === 0) {
+                el.innerHTML = '<div class="empty">暂无收藏，添加你的第一个网址</div>';
+                return;
+            }
+            let html = '';
+            list.forEach(item => {
+                const favicon = getFaviconUrl(item.url);
+                const firstChar = item.name.charAt(0).toUpperCase();
+                const iconClass = currentIconSize === 'small' ? 'small' : currentIconSize;
+                const smallIconMode = currentIconSize === 'small' ? 'small-icon-mode' : '';
+                const noIconClass = ''; // 不再使用 no-icon 类
+                
+                if (currentIconSize === 'small') {
+                    // 小图标模式：横向布局
+                    html += `
+                    <div class="link-card ${smallIconMode}" draggable="true" data-id="${item.id}" 
+                         ondragstart="handleDragStart(event)" 
+                         ondragend="handleDragEnd(event)"
+                         ondragover="handleDragOver(event)"
+                         ondrop="handleDrop(event)">
+                        <button class="move-btn-icon" onclick="showMoveToTabModal(${item.id})" title="移动到其它Tab">⇄</button>
+                        <div class="link-icon ${iconClass}" style="background-image: url('${favicon}'); background-size: cover; background-position: center;">
+                            <span style="${hasFavicon(favicon) ? 'display:none' : ''}">${firstChar}</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="link-name">${item.name}</div>
+                            <div class="link-url"><a href="${item.url}" target="_blank">${item.url}</a></div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')">打开</button>
+                            <button class="card-btn edit-btn" onclick="openEditModal(${item.id})">编辑</button>
+                            <button class="card-btn del-btn" onclick="delLink(${item.id})">删除</button>
+                        </div>
+                    </div>`;
+                } else {
+                    // 大/中图标模式：纵向布局
+                    html += `
+                    <div class="link-card" draggable="true" data-id="${item.id}" 
+                         ondragstart="handleDragStart(event)" 
+                         ondragend="handleDragEnd(event)"
+                         ondragover="handleDragOver(event)"
+                         ondrop="handleDrop(event)">
+                        <button class="move-btn-icon" onclick="showMoveToTabModal(${item.id})" title="移动到其它Tab">⇄</button>
+                        <div class="link-icon ${iconClass}" style="background-image: url('${favicon}'); background-size: cover; background-position: center;">
+                            <span style="${hasFavicon(favicon) ? 'display:none' : ''}">${firstChar}</span>
+                        </div>
+                        <div class="link-name">${item.name}</div>
+                        <div class="link-url"><a href="${item.url}" target="_blank">${item.url}</a></div>
+                        <div class="card-actions">
+                            <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')">打开</button>
+                            <button class="card-btn edit-btn" onclick="openEditModal(${item.id})">编辑</button>
+                            <button class="card-btn del-btn" onclick="delLink(${item.id})">删除</button>
+                        </div>
+                    </div>`;
+                }
+            });
+            el.innerHTML = html;
+        }
+
+        // 加载 Tabs
+        async function loadTabs() {
+            const res = await fetch('/api/get');
+            const data = await res.json();
+            const tabs = data.tabs || [{ id: Date.now(), name: '我的常用站点', links: [] }];
+            
+            // 如果没有当前选中的 tab，选中第一个
+            if (!currentTabId && tabs.length > 0) {
+                currentTabId = tabs[0].id;
+            }
+            
+            // 从服务器获取当前tabId
+            if (data.currentTabId) {
+                currentTabId = data.currentTabId;
+            }
+            
+            // 计算下一个 Tab 序号
+            calculateNextTabNumber(tabs);
+            
+            renderTabs(tabs);
+        }
+
+        // 计算下一个 Tab 序号
+        function calculateNextTabNumber(tabs) {
+            let maxNum = 1;
+            tabs.forEach(tab => {
+                const match = tab.name.match(/^Tab#(\d+)$/);
+                if (match) {
+                    const num = parseInt(match[1]);
+                    if (num > maxNum) {
+                        maxNum = num;
+                    }
+                }
+            });
+            nextTabNumber = maxNum + 1;
+        }
+
+        // 渲染 Tabs
+        function renderTabs(tabs) {
+            const header = document.getElementById('tabHeader');
+            let html = '';
+            
+            tabs.forEach((tab, index) => {
+                const activeClass = tab.id === currentTabId ? 'active' : '';
+                const closeBtn = tabs.length > 1 ? `<span class="tab-close" onclick="deleteTab(${tab.id}, event)">×</span>` : '';
+                html += `
+                    <div class="tab-item ${activeClass}" draggable="true" data-tab-id="${tab.id}"
+                         ondragstart="handleTabDragStart(event)"
+                         ondragend="handleTabDragEnd(event)"
+                         ondragover="handleTabDragOver(event)"
+                         ondrop="handleTabDrop(event)">
+                        <span class="tab-name" id="tab-name-${tab.id}" title="双击修改名称">${tab.name}</span>
+                        ${closeBtn}
+                    </div>
+                `;
+            });
+            
+            html += '<button class="add-tab-btn" onclick="addTab()">+ 添加Tab</button>';
+            header.innerHTML = html;
+            
+            // 为每个 Tab 绑定事件
+            tabs.forEach(tab => {
+                const tabElement = document.querySelector(`.tab-item[data-tab-id="${tab.id}"]`);
+                const nameElement = document.getElementById(`tab-name-${tab.id}`);
+                
+                if (tabElement && nameElement) {
+                    let clickTimer = null;
+                    
+                    // 使用延迟处理单击/双击
+                    tabElement.addEventListener('click', function(e) {
+                        if (e.target.classList.contains('tab-close')) return;
+                        
+                        if (clickTimer) {
+                            // 已经有一次点击，这是双击
+                            clearTimeout(clickTimer);
+                            clickTimer = null;
+                            e.stopPropagation();
+                            startEditTabName(tab.id, nameElement);
+                        } else {
+                            // 第一次点击，等待看是否有第二次点击
+                            clickTimer = setTimeout(() => {
+                                clickTimer = null;
+                                switchTab(tab.id);
+                            }, 250); // 250ms 内再次点击算双击
+                        }
+                    });
+                }
+            });
+        }
+
+        // 开始编辑 Tab 名称
+        function startEditTabName(tabId, element) {
+            const currentName = element.textContent;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'tab-name-input';
+            input.value = currentName;
+            
+            // 阻止事件冒泡，避免触发 Tab 切换
+            input.addEventListener('click', (e) => e.stopPropagation());
+            input.addEventListener('dblclick', (e) => e.stopPropagation());
+            
+            element.replaceWith(input);
+            input.focus();
+            input.select();
+            
+            // 失去焦点或按回车时保存
+            const saveEdit = () => {
+                const newName = input.value.trim();
+                if (newName && newName !== currentName) {
+                    updateTabName(tabId, newName);
+                } else if (!newName) {
+                    // 如果名称为空，恢复原名称
+                    showToast('Tab名称不能为空', 'warning');
+                    input.replaceWith(createTabNameElement(currentName, tabId));
+                } else {
+                    // 名称未改变，恢复原样
+                    input.replaceWith(createTabNameElement(currentName, tabId));
+                }
+            };
+            
+            input.addEventListener('blur', saveEdit);
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    saveEdit();
+                }
+            });
+            
+            // 按ESC取消
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    input.replaceWith(createTabNameElement(currentName, tabId));
+                }
+            });
+        }
+
+        // 创建 Tab 名称元素
+        function createTabNameElement(name, tabId) {
+            const span = document.createElement('span');
+            span.className = 'tab-name';
+            span.textContent = name;
+            span.setAttribute('ondblclick', `startEditTabName(${tabId}, this)`);
+            return span;
+        }
+
+        // 更新 Tab 名称
+        async function updateTabName(tabId, newName) {
+            try {
+                await fetch('/api/updateTabName', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tabId, name: newName })
+                });
+                loadTabs();
+            } catch (error) {
+                console.error('Update tab name error:', error);
+                showToast('更新Tab名称失败', 'error');
+            }
+        }
+
+        // 切换 Tab
+        async function switchTab(tabId) {
+            currentTabId = tabId;
+            await fetch('/api/switchTab', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tabId })
+            });
+            loadLinks();
+            loadTabs();
+        }
+
+        // 添加 Tab
+        async function addTab() {
+            // 使用递增的序号作为默认名称
+            const defaultName = `Tab#${nextTabNumber}`;
+            
+            customPrompt('请输入Tab名称：', defaultName, async (name) => {
+                if (!name || !name.trim()) return;
+                
+                try {
+                    const response = await fetch('/api/addTab', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: name.trim() })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.code === 0) {
+                        // 如果使用的是默认名称，增加序号
+                        if (name.trim() === defaultName) {
+                            nextTabNumber++;
+                        } else {
+                            // 如果用户自定义了名称，重新计算序号
+                            const res = await fetch('/api/get');
+                            const data = await res.json();
+                            calculateNextTabNumber(data.tabs || []);
+                        }
+                        
+                        // 切换到新 Tab
+                        if (result.tabId) {
+                            currentTabId = result.tabId;
+                        }
+                        
+                        // 重新加载 Tabs 和 Links
+                        await loadTabs();
+                        await loadLinks();
+                        showToast('Tab添加成功', 'success');
+                    } else {
+                        showToast(result.message || '添加Tab失败', 'error');
+                    }
+                } catch (error) {
+                    console.error('Add tab error:', error);
+                    showToast('添加Tab失败', 'error');
+                }
+            });
+        }
+
+        // 删除 Tab
+        async function deleteTab(tabId, event) {
+            event.stopPropagation();
+            
+            customConfirm('确定要删除这个Tab吗？', async (confirmed) => {
+                if (!confirmed) return;
+                
+                try {
+                    const res = await fetch('/api/deleteTab', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tabId })
+                    });
+                    const result = await res.json();
+                    
+                    if (result.code === 0) {
+                        loadTabs();
+                        loadLinks();
+                        showToast('Tab删除成功', 'success');
+                    } else {
+                        showToast(result.message || '删除失败', 'error');
+                    }
+                } catch (error) {
+                    console.error('Delete tab error:', error);
+                    showToast('删除Tab失败', 'error');
+                }
+            });
+        }
+
+        // Tab 拖拽功能
+        function handleTabDragStart(event) {
+            draggedTabElement = event.target.closest('.tab-item');
+            if (!draggedTabElement) return;
+            draggedTabElement.classList.add('dragging');
+            event.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleTabDragEnd(event) {
+            if (draggedTabElement) {
+                draggedTabElement.classList.remove('dragging');
+                document.querySelectorAll('.tab-item').forEach(tab => {
+                    tab.classList.remove('drag-over');
+                });
+                draggedTabElement = null;
+            }
+        }
+
+        function handleTabDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            const tab = event.target.closest('.tab-item');
+            if (tab && tab !== draggedTabElement) {
+                tab.classList.add('drag-over');
+            }
+        }
+
+        async function handleTabDrop(event) {
+            event.preventDefault();
+            const targetTab = event.target.closest('.tab-item');
+            
+            if (!targetTab || !draggedTabElement || targetTab === draggedTabElement) {
+                return;
+            }
+
+            const header = document.getElementById('tabHeader');
+            const tabs = Array.from(header.querySelectorAll('.tab-item'));
+            
+            const draggedIndex = tabs.indexOf(draggedTabElement);
+            const targetIndex = tabs.indexOf(targetTab);
+
+            if (draggedIndex === -1 || targetIndex === -1) {
+                return;
+            }
+
+            // 重新排列DOM元素
+            if (draggedIndex < targetIndex) {
+                header.insertBefore(draggedTabElement, targetTab.nextSibling);
+            } else {
+                header.insertBefore(draggedTabElement, targetTab);
+            }
+
+            // 获取新的顺序并保存到服务器
+            const newOrderTabs = Array.from(header.querySelectorAll('.tab-item'));
+            const tabIds = newOrderTabs.map(tab => parseInt(tab.dataset.tabId));
+            
+            try {
+                await fetch('/api/updateTabOrder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tabIds })
+                });
+                console.log('Tab order saved');
+            } catch (error) {
+                console.error('Save tab order error:', error);
+                loadTabs();
+            }
+        }
+
+        // 新增
+        async function addLink() {
+            const name = document.getElementById('linkName').value.trim();
+            const url = document.getElementById('linkUrl').value.trim();
+            if (!name || !url) {
+                showToast('请填写名称和网址', 'warning');
+                return;
+            }
+            await fetch('/api/add', {
+                method: 'POST',
+                body: JSON.stringify({ name, url })
+            });
+            document.getElementById('linkName').value = '';
+            document.getElementById('linkUrl').value = '';
+            loadLinks();
+        }
+
+        // 打开添加弹窗
+        function openAddModal() {
+            document.getElementById('addName').value = '';
+            document.getElementById('addUrl').value = '';
+            document.getElementById('addModal').style.display = 'flex';
+        }
+
+        // 关闭添加弹窗
+        function closeAddModal() {
+            document.getElementById('addModal').style.display = 'none';
+        }
+
+        // 自动填充名称
+        async function autoFillName() {
+            const url = document.getElementById('addUrl').value.trim();
+            const nameInput = document.getElementById('addName');
+            // 只有当名称为空时才自动填充
+            if (url && !nameInput.value.trim()) {
+                // 使用域名作为名称
+                const extractedName = extractNameFromUrl(url);
+                if (extractedName) {
+                    nameInput.value = extractedName;
+                }
+            }
+        }
+
+        // 保存添加的链接
+        async function saveAddLink() {
+            let name = document.getElementById('addName').value.trim();
+            const url = document.getElementById('addUrl').value.trim();
+            
+            if (!url) {
+                showToast('请填写网址', 'warning');
+                return;
+            }
+            
+            // 如果名称为空，自动从 URL 提取
+            if (!name) {
+                name = extractNameFromUrl(url);
+            }
+            
+            if (!name) {
+                showToast('无法提取网站名称，请手动输入', 'warning');
+                return;
+            }
+            
+            try {
+                await fetch('/api/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, url })
+                });
+                closeAddModal();
+                loadLinks();
+                showToast('添加成功', 'success');
+            } catch (error) {
+                console.error('Add link error:', error);
+                showToast('添加失败：' + error.message, 'error');
+            }
+        }
+
+        // 删除
+        async function delLink(id) {
+            customConfirm('确定删除？', async (confirmed) => {
+                if (!confirmed) return;
+                await fetch('/api/del', {
+                    method: 'POST',
+                    body: JSON.stringify({ id })
+                });
+                loadLinks();
+                showToast('删除成功', 'success');
+            });
+        }
+
+        // 获取网站favicon - 使用国内可访问的服务
+        function getFaviconUrl(url) {
+            try {
+                const domain = new URL(url).hostname;
+                // 使用 favicon.im 服务，国内可访问
+                return `https://favicon.im/${domain}`;
+            } catch {
+                return '';
+            }
+        }
+
+        // 检查是否有favicon
+        function hasFavicon(url) {
+            return url && url.length > 0;
+        }
+
+        // 从 URL 提取网站名称
+        function extractNameFromUrl(url) {
+            try {
+                const urlObj = new URL(url);
+                const hostname = urlObj.hostname;
+                // 去除 www. 前缀
+                const name = hostname.replace(/^www\./, '');
+                // 取第一个部分作为名称
+                const parts = name.split('.');
+                return parts[0] || name;
+            } catch {
+                return '';
+            }
+        }
+
+        // 打开编辑弹窗
+        async function openEditModal(id) {
+            currentEditId = id;
+            const res = await fetch('/api/get');
+            const data = await res.json();
+            const list = data.links || [];
+            const item = list.find(i => i.id === id);
+            if (item) {
+                document.getElementById('editName').value = item.name;
+                document.getElementById('editUrl').value = item.url;
+                document.getElementById('editModal').style.display = 'flex';
+            }
+        }
+
+        // 关闭编辑弹窗
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            currentEditId = null;
+        }
+
+        // 保存编辑
+        async function saveEdit() {
+            const name = document.getElementById('editName').value.trim();
+            const url = document.getElementById('editUrl').value.trim();
+            if (!name || !url) {
+                showToast('请填写名称和网址', 'warning');
+                return;
+            }
+            try {
+                const response = await fetch('/api/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id: currentEditId, name, url })
+                });
+                const result = await response.json();
+                console.log('Update result:', result);
+                if (result.code === 0) {
+                    closeEditModal();
+                    loadLinks();
+                    showToast('保存成功', 'success');
+                } else {
+                    showToast('保存失败：' + (result.message || '未知错误'), 'error');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                showToast('保存时发生错误：' + error.message, 'error');
+            }
+        }
+
+        // 同步读取数据（用于编辑时获取当前值）
+        function readDataSync() {
+            // 这里需要从服务器获取，简化处理：从DOM中获取不太准确，所以还是用异步
+            // 实际应该在openEditModal时就已获取
+            return [];
+        }
+
+        // 加载标题
+        async function loadTitle() {
+            try {
+                const res = await fetch('/api/get');
+                const data = await res.json();
+                if (data.title) {
+                    document.getElementById('pageTitle').textContent = data.title;
+                    // 同时更新页面 title 标签
+                    document.title = data.title;
+                }
+            } catch (error) {
+                console.error('Load title error:', error);
+                // 如果失败，尝试从localStorage读取
+                const savedTitle = localStorage.getItem('siteTitle');
+                if (savedTitle) {
+                    document.getElementById('pageTitle').textContent = savedTitle;
+                    document.title = savedTitle;
+                }
+            }
+        }
+
+        // 开始编辑标题
+        function startEditTitle() {
+            const titleEl = document.getElementById('pageTitle');
+            const editEl = document.getElementById('titleEdit');
+            editEl.value = titleEl.textContent;
+            titleEl.style.display = 'none';
+            editEl.style.display = 'block';
+            editEl.focus();
+            editEl.select();
+        }
+
+        // 保存标题
+        async function saveTitle() {
+            const titleEl = document.getElementById('pageTitle');
+            const editEl = document.getElementById('titleEdit');
+            const newTitle = editEl.value.trim();
+            if (newTitle) {
+                titleEl.textContent = newTitle;
+                // 同时更新页面 title 标签
+                document.title = newTitle;
+                // 保存到服务器
+                try {
+                    await fetch('/api/updateTitle', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ title: newTitle })
+                    });
+                    console.log('Title saved to server');
+                } catch (error) {
+                    console.error('Save title error:', error);
+                }
+            }
+            editEl.style.display = 'none';
+            titleEl.style.display = 'inline-block';
+        }
+
+        // 拖拽功能
+        function handleDragStart(event) {
+            draggedElement = event.target.closest('.link-card');
+            draggedElement.classList.add('dragging');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/html', draggedElement.innerHTML);
+        }
+
+        function handleDragEnd(event) {
+            if (draggedElement) {
+                draggedElement.classList.remove('dragging');
+                // 移除所有drag-over类
+                document.querySelectorAll('.link-card').forEach(card => {
+                    card.classList.remove('drag-over');
+                });
+                draggedElement = null;
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            const card = event.target.closest('.link-card');
+            if (card && card !== draggedElement) {
+                card.classList.add('drag-over');
+            }
+        }
+
+        async function handleDrop(event) {
+            event.preventDefault();
+            const targetCard = event.target.closest('.link-card');
+            
+            if (!targetCard || !draggedElement || targetCard === draggedElement) {
+                return;
+            }
+
+            // 获取所有卡片的ID顺序
+            const grid = document.getElementById('linkList');
+            const cards = Array.from(grid.querySelectorAll('.link-card'));
+            
+            // 找到拖动元素和目标元素的位置
+            const draggedIndex = cards.indexOf(draggedElement);
+            const targetIndex = cards.indexOf(targetCard);
+
+            if (draggedIndex === -1 || targetIndex === -1) {
+                return;
+            }
+
+            // 重新排列DOM元素
+            if (draggedIndex < targetIndex) {
+                grid.insertBefore(draggedElement, targetCard.nextSibling);
+            } else {
+                grid.insertBefore(draggedElement, targetCard);
+            }
+
+            // 获取新的顺序并保存到服务器
+            const newOrderCards = Array.from(grid.querySelectorAll('.link-card'));
+            const linkIds = newOrderCards.map(card => parseInt(card.dataset.id));
+            
+            try {
+                await fetch('/api/updateOrder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ linkIds })
+                });
+                console.log('Order saved to server');
+            } catch (error) {
+                console.error('Save order error:', error);
+                // 如果保存失败，重新加载列表恢复原状
+                loadLinks();
+            }
+        }
+
+        // 设置图标大小
+        async function setIconSize(size) {
+            currentIconSize = size;
+            
+            try {
+                await fetch('/api/updateIconSize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ iconSize: size })
+                });
+                console.log('Icon size changed to:', size);
+                updateIconSizeButtons();
+                loadLinks(); // 重新加载以应用新样式
+                showToast('图标大小已更改', 'success');
+            } catch (error) {
+                console.error('Change icon size error:', error);
+                showToast('更改图标大小失败', 'error');
+            }
+        }
+
+        // 更新图标大小按钮状态
+        function updateIconSizeButtons() {
+            // 移除所有按钮的active类
+            document.querySelectorAll('.icon-size-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 给当前选中的按钮添加active类
+            const activeBtnId = 'btn' + currentIconSize.charAt(0).toUpperCase() + currentIconSize.slice(1);
+            const activeBtn = document.getElementById(activeBtnId);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+        }
+
+        // 导出数据
+        async function exportData() {
+            try {
+                const res = await fetch('/api/get');
+                const data = await res.json();
+                
+                // 创建JSON文件
+                const jsonStr = JSON.stringify(data, null, 2);
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                // 创建下载链接
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `mywebsite_backup_${new Date().getTime()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                console.log('Data exported successfully');
+                showToast('数据导出成功', 'success');
+            } catch (error) {
+                console.error('Export error:', error);
+                showToast('导出失败：' + error.message, 'error');
+            }
+        }
+
+        // 导入数据
+        async function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                
+                // 确认导入
+                customConfirm(`确定要导入 ${data.links ? data.links.length : 0} 个收藏吗？这将与现有数据合并。`, async (confirmed) => {
+                    if (!confirmed) {
+                        event.target.value = ''; // 清空文件选择
+                        return;
+                    }
+                
+                const response = await fetch('/api/import', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                if (result.code === 0) {
+                    let message = '导入成功！';
+                    if (result.added !== undefined && result.skipped !== undefined) {
+                        message = `导入完成！\n新增：${result.added} 个\n跳过重复：${result.skipped} 个`;
+                    }
+                    showToast(message, 'success');
+                    loadLinks(); // 重新加载列表
+                } else {
+                    showToast('导入失败：' + (result.message || '未知错误'), 'error');
+                }
+                });
+            } catch (error) {
+                console.error('Import error:', error);
+                showToast('导入失败：文件格式不正确或损坏', 'error');
+            }
+            
+            // 清空文件选择，允许重复导入同一文件
+            event.target.value = '';
+        }
+
+        // 显示移动到Tab的弹窗
+        async function showMoveToTabModal(linkId) {
+            movingLinkId = linkId;
+            const res = await fetch('/api/get');
+            const data = await res.json();
+            const tabs = data.tabs || [];
+            
+            const select = document.getElementById('targetTabSelect');
+            select.innerHTML = '';
+            
+            tabs.forEach(tab => {
+                if (tab.id !== currentTabId) { // 排除当前Tab
+                    const option = document.createElement('option');
+                    option.value = tab.id;
+                    option.textContent = `${tab.name} (${tab.links ? tab.links.length : 0}个站点)`;
+                    select.appendChild(option);
+                }
+            });
+            
+            if (tabs.length <= 1) {
+                alert('没有其他Tab可以移动');
+                return;
+            }
+            
+            document.getElementById('moveToTabModal').style.display = 'flex';
+        }
+
+        // 关闭移动到Tab的弹窗
+        function closeMoveToTabModal() {
+            document.getElementById('moveToTabModal').style.display = 'none';
+            movingLinkId = null;
+        }
+
+        // 确认移动到Tab
+        async function confirmMoveToTab() {
+            const targetTabId = parseInt(document.getElementById('targetTabSelect').value);
+            if (!targetTabId || !movingLinkId) return;
+            
+            try {
+                const response = await fetch('/api/moveLinkToTab', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        linkId: movingLinkId,
+                        fromTabId: currentTabId,
+                        toTabId: targetTabId
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.code === 0) {
+                    closeMoveToTabModal();
+                    loadLinks();
+                    loadTabs();
+                } else {
+                    alert(result.message || '移动失败');
+                }
+            } catch (error) {
+                console.error('Move link error:', error);
+                alert('移动失败：' + error.message);
+            }
+        }
+        
+        // ==================== Custom Dialog Functions ====================
+        
+        // Toast 提示
+        function showToast(message, type = 'info', duration = 3000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            // 添加图标
+            const icons = {
+                success: '✓',
+                error: '✕',
+                warning: '⚠',
+                info: 'ℹ'
+            };
+            
+            toast.innerHTML = `<span style="font-size: 18px;">${icons[type]}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            
+            // 自动消失
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, duration);
+        }
+        
+        // 自定义 Confirm
+        function showConfirm(message, callback) {
+            confirmCallback = callback;
+            document.getElementById('confirmMessage').textContent = message;
+            document.getElementById('confirmOverlay').style.display = 'flex';
+        }
+        
+        function closeConfirm(result) {
+            document.getElementById('confirmOverlay').style.display = 'none';
+            if (confirmCallback) {
+                confirmCallback(result);
+                confirmCallback = null;
+            }
+        }
+        
+        // 自定义 Prompt
+        function showPrompt(title, defaultValue, callback) {
+            promptCallback = callback;
+            document.getElementById('promptTitle').textContent = title;
+            document.getElementById('promptInput').value = defaultValue || '';
+            document.getElementById('promptOverlay').style.display = 'flex';
+            
+            // 自动聚焦并选中
+            setTimeout(() => {
+                const input = document.getElementById('promptInput');
+                input.focus();
+                input.select();
+            }, 100);
+        }
+        
+        function closePrompt(value) {
+            document.getElementById('promptOverlay').style.display = 'none';
+            if (promptCallback) {
+                promptCallback(value);
+                promptCallback = null;
+            }
+        }
+        
+        function closePromptWithInput() {
+            const value = document.getElementById('promptInput').value;
+            closePrompt(value);
+        }
+        
+        // 重写系统函数
+        window.customAlert = function(message) {
+            showToast(message, 'info');
+        };
+        
+        window.customConfirm = function(message, callback) {
+            showConfirm(message, callback);
+        };
+        
+        window.customPrompt = function(title, defaultValue, callback) {
+            showPrompt(title, defaultValue, callback);
+        };
+    </script>
+    
+    <!-- Footer -->
+    <div class="footer">
+        (c) DSH-MyWebsite v1.0.0
+    </div>
+    
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- Custom Confirm Dialog -->
+    <div class="confirm-overlay" id="confirmOverlay">
+        <div class="confirm-dialog">
+            <div class="confirm-message" id="confirmMessage"></div>
+            <div class="confirm-buttons">
+                <button class="confirm-btn confirm-cancel" onclick="closeConfirm(false)">取消</button>
+                <button class="confirm-btn confirm-ok" onclick="closeConfirm(true)">确定</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Custom Prompt Dialog -->
+    <div class="prompt-overlay" id="promptOverlay">
+        <div class="prompt-dialog">
+            <div class="prompt-title" id="promptTitle">提示</div>
+            <input type="text" class="prompt-input" id="promptInput">
+            <div class="confirm-buttons">
+                <button class="confirm-btn confirm-cancel" onclick="closePrompt(null)">取消</button>
+                <button class="confirm-btn confirm-ok" onclick="closePromptWithInput()">确定</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
