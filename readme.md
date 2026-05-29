@@ -1,6 +1,6 @@
 # 我的收藏地址 My Bookmark
 
-![](doc/favicon_middle.png)
+![](doc/favicon_banner.png)
 
 ## 功能
 
@@ -63,4 +63,8 @@ v1.0.0
 * 支持国际化（中文和English)
 
 ![](doc/i18n.png)
+
+* 设置
+
+![](doc/setup.png)
 

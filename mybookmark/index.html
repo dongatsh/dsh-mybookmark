@@ -45,6 +45,10 @@
         .move-btn-icon:hover {background: #6b46c1;transform: scale(1.1);}
         .link-card.no-icon .move-btn-icon {opacity: 0;}
         .link-card.no-icon:hover .move-btn-icon {opacity: 1;}
+        /* 刷新 Favicon 按钮 - 右上角小图标（在移动按钮左侧） */
+        .refresh-favicon-btn {position: absolute;top: 8px;right: 36px;width: 24px;height: 24px;padding: 0;background: #38b2ac;color: #fff;border: none;border-radius: 50%;cursor: pointer;font-size: 12px;display: flex;align-items: center;justify-content: center;transition: all 0.3s;z-index: 10;opacity: 0;}
+        .link-card:hover .refresh-favicon-btn {opacity: 1;}
+        .refresh-favicon-btn:hover {background: #319795;transform: scale(1.1);}
         /* URL链接样式 */
         .link-url a {color: #718096;text-decoration: none;word-break: break-all;}
         .link-url a:hover {color: #4299e1;text-decoration: underline;}
@@ -53,7 +57,7 @@
         .icon-size-btn {padding: 10px 15px;border: 2px solid #e2e8f0;background: #fff;border-radius: 6px;cursor: pointer;font-size: 13px;transition: all 0.3s;color: #4a5568;}
         .icon-size-btn:hover {border-color: #4299e1;background: #ebf8ff;color: #2b6cb0;}
         .icon-size-btn.active {border-color: #4299e1;background: #4299e1;color: #fff;}
-        .link-icon {width: 64px;height: 64px;margin: 0 auto 15px;border-radius: 12px;display: flex;align-items: center;justify-content: center;font-size: 28px;background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);color: #fff;}
+        .link-icon {width: 64px;height: 64px;margin: 0 auto 15px;border-radius: 12px;display: flex;align-items: center;justify-content: center;font-size: 28px;color: #fff;position: relative;overflow: hidden;background: transparent;}
         .link-name {font-weight: bold;color: #2d3748;margin-bottom: 8px;font-size: 14px;word-break: break-word;}
         .link-url {color: #718096;font-size: 11px;word-break: break-all;margin-bottom: 15px;max-height: 30px;overflow: hidden;}
         .card-actions {display: flex;gap: 8px;justify-content: center;}
@@ -115,7 +119,8 @@
         
         /* Tab Styles - Traditional Style */
         .tab-container {margin-bottom: 0;}
-        .tab-header {display: flex;align-items: flex-end;gap: 2px;background: transparent;padding: 0 15px;border-bottom: 2px solid #e2e8f0;overflow-x: auto;}
+        .tab-header {display: flex;align-items: flex-end;gap: 2px;background: transparent;padding: 0 15px;border-bottom: 2px solid #e2e8f0;overflow-x: auto;scrollbar-width: none;-ms-overflow-style: none;}
+        .tab-header::-webkit-scrollbar {display: none;}
         .tab-item {padding: 12px 24px;background: #e2e8f0;border-radius: 8px 8px 0 0;cursor: pointer;font-size: 14px;color: #4a5568;transition: all 0.3s;white-space: nowrap;display: flex;align-items: center;gap: 8px;user-select: none;border: 1px solid #cbd5e0;border-bottom: none;margin-bottom: -2px;position: relative;}
         .tab-item:hover {background: #cbd5e0;}
         .tab-item.active {background: #fff;color: #2d3748;border-color: #e2e8f0;font-weight: bold;z-index: 1;box-shadow: 0 -2px 8px rgba(66, 153, 225, 0.15);}
@@ -164,6 +169,7 @@
             <!-- 右侧：操作按钮 -->
             <div style="display: flex;gap: 10px;flex-shrink: 0;">
                 <button onclick="openAddModal()" style="flex: 0 0 auto;" data-i18n="addBookmark">添加收藏</button>
+                <button onclick="openSettingsModal()" style="background: #718096;" data-i18n="settings">⚙ 设置</button>
                 <button onclick="exportData()" style="background: #805ad5;" data-i18n="exportData">导出数据</button>
                 <button onclick="document.getElementById('importFile').click()" style="background: #38b2ac;" data-i18n="importData">导入数据</button>
                 <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
@@ -214,6 +220,32 @@
             <div class="modal-buttons">
                 <button class="cancel-btn" onclick="closeMoveToTabModal()" data-i18n="cancel">取消</button>
                 <button class="save-btn" onclick="confirmMoveToTab()" data-i18n="confirm">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <h3>⚙ <span data-i18n="settings">系统设置</span></h3>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block;margin-bottom: 5px;color: #4a5568;font-weight: bold;" data-i18n="portNumber">端口号：</label>
+                <input type="number" class="modal-input" id="settingPort" placeholder="8080" min="1" max="65535" style="margin-bottom: 5px;">
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: flex;align-items: center;gap: 10px;cursor: pointer;">
+                    <input type="checkbox" id="settingDebug" style="width: auto;margin: 0;">
+                    <span style="color: #4a5568;" data-i18n="debugMode">开启调试模式</span>
+                </label>
+            </div>
+            <div style="background: #fffbeb;border-left: 4px solid #f59e0b;padding: 12px;margin-bottom: 20px;border-radius: 4px;">
+                <p style="color: #92400e;font-size: 13px;margin: 0;" data-i18n="restartRequired">
+                    ⚠️ <strong>注意：</strong>如果修改了端口，需要重启服务后才能生效。
+                </p>
+            </div>
+            <div class="modal-buttons">
+                <button class="cancel-btn" onclick="closeSettingsModal()" data-i18n="cancel">取消</button>
+                <button class="save-btn" onclick="saveSettings()" data-i18n="save">保存</button>
             </div>
         </div>
     </div>
@@ -283,7 +315,16 @@
                 doubleClickToEdit: '双击修改名称',
                 sitesCount: '个站点',
                 atLeastOneTab: '至少需要保留一个选项卡',
-                tabHasLinks: '该选项卡中有{count}个站点，请先清空后再删除'
+                tabHasLinks: '该选项卡中有{count}个站点，请先清空后再删除',
+                settings: '设置',
+                portNumber: '端口号',
+                debugMode: '开启调试模式',
+                restartRequired: '⚠️ 注意：如果修改了端口，需要重启服务后才能生效。',
+                configSaved: '配置保存成功！如果修改了端口，请重启服务。',
+                configSaveFailed: '保存配置失败：',
+                getConfigFailed: '获取配置失败',
+                enterPort: '请输入端口号',
+                invalidPort: '端口号必须在 1-65535 之间'
             },
             en: {
                 pageTitle: 'My Bookmarks',
@@ -347,7 +388,16 @@
                 doubleClickToEdit: 'Double-click to edit name',
                 sitesCount: ' sites',
                 atLeastOneTab: 'At least one tab must be kept',
-                tabHasLinks: 'This tab has {count} sites, please clear them first'
+                tabHasLinks: 'This tab has {count} sites, please clear them first',
+                settings: 'Settings',
+                portNumber: 'Port Number',
+                debugMode: 'Enable Debug Mode',
+                restartRequired: '⚠️ Note: If you change the port, you need to restart the service for it to take effect.',
+                configSaved: 'Configuration saved! If you changed the port, please restart the service.',
+                configSaveFailed: 'Failed to save configuration: ',
+                getConfigFailed: 'Failed to get configuration',
+                enterPort: 'Please enter port number',
+                invalidPort: 'Port number must be between 1-65535'
             }
         };
         
@@ -400,15 +450,79 @@
         }
         
         // 页面加载读取数据
-        window.onload = function() {
+        window.onload = async function() {
+            await loadConstants();
             loadTitle();
             loadTabs();
             loadLinks();
             applyLanguage(); // 应用语言设置
         };
 
+        // 加载常量配置
+        async function loadConstants() {
+            try {
+                console.log('Loading constants from API...');
+                const response = await fetch('/api/getConstants');
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('API result:', result);
+                
+                if (result.code !== 0) {
+                    throw new Error(result.message || 'Failed to get constants');
+                }
+                
+                const constants = {
+                    version: result.version,
+                    copyright: result.copyright,
+                    url: result.url
+                };
+                console.log('Constants loaded:', constants);
+                
+                // 更新页脚版权信息
+                const footer = document.querySelector('.footer');
+                console.log('Footer element:', footer);
+                
+                if (footer && constants.version && constants.copyright) {
+                    if (constants.url) {
+                        // 如果存在 URL，创建可点击的链接
+                        footer.innerHTML = `<a href="${constants.url}" target="_blank" style="color: #a0aec0; text-decoration: none;">${constants.copyright} v${constants.version}</a>`;
+                        // 添加悬停效果
+                        footer.querySelector('a').addEventListener('mouseenter', function() {
+                            this.style.color = '#4299e1';
+                            this.style.textDecoration = 'underline';
+                        });
+                        footer.querySelector('a').addEventListener('mouseleave', function() {
+                            this.style.color = '#a0aec0';
+                            this.style.textDecoration = 'none';
+                        });
+                        console.log('Footer updated with link');
+                    } else {
+                        // 如果没有 URL，显示纯文本
+                        footer.textContent = `${constants.copyright} v${constants.version}`;
+                        console.log('Footer updated with text');
+                    }
+                } else {
+                    console.warn('Missing version or copyright in constants');
+                }
+            } catch (error) {
+                console.error('Failed to load constants:', error);
+                // 如果加载失败，使用默认值
+                const footer = document.querySelector('.footer');
+                if (footer) {
+                    footer.textContent = '(c) DSH-MyBookmark v1.0.0';
+                    console.log('Using default footer text');
+                }
+            }
+        }
+
         let currentEditId = null;
         let draggedElement = null;
+        let draggedLinkId = null; // 保存被拖动的站点 ID
         let currentIconSize = 'medium';
         let currentTabId = null;
         let draggedTabElement = null;
@@ -434,8 +548,8 @@
             }
             let html = '';
             list.forEach(item => {
-                const favicon = getFaviconUrl(item.url);
-                const firstChar = item.name.charAt(0).toUpperCase();
+                const favicon = getFaviconUrl(item);
+                console.log('Loading favicon for:', item.name, '(ID:', item.id, ')', '->', favicon);
                 const iconClass = currentIconSize === 'small' ? 'small' : currentIconSize;
                 const smallIconMode = currentIconSize === 'small' ? 'small-icon-mode' : '';
                 const noIconClass = ''; // 不再使用 no-icon 类
@@ -449,8 +563,9 @@
                          ondragover="handleDragOver(event)"
                          ondrop="handleDrop(event)">
                         <button class="move-btn-icon" onclick="showMoveToTabModal(${item.id})" title="移动到其它选项卡">⇄</button>
-                        <div class="link-icon ${iconClass}" style="background-image: url('${favicon}'); background-size: cover; background-position: center;">
-                            <span style="${hasFavicon(favicon) ? 'display:none' : ''}">${firstChar}</span>
+                        <button class="refresh-favicon-btn" onclick="refreshFavicon(${item.id})" title="刷新图标">🔄</button>
+                        <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center;">
+                            <img src="${favicon}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
                         </div>
                         <div class="card-content">
                             <div class="link-name">${item.name}</div>
@@ -471,8 +586,9 @@
                          ondragover="handleDragOver(event)"
                          ondrop="handleDrop(event)">
                         <button class="move-btn-icon" onclick="showMoveToTabModal(${item.id})" title="移动到其它选项卡">⇄</button>
-                        <div class="link-icon ${iconClass}" style="background-image: url('${favicon}'); background-size: cover; background-position: center;">
-                            <span style="${hasFavicon(favicon) ? 'display:none' : ''}">${firstChar}</span>
+                        <button class="refresh-favicon-btn" onclick="refreshFavicon(${item.id})" title="刷新图标">🔄</button>
+                        <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center;">
+                            <img src="${favicon}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
                         </div>
                         <div class="link-name">${item.name}</div>
                         <div class="link-url"><a href="${item.url}" target="_blank">${item.url}</a></div>
@@ -485,6 +601,23 @@
                 }
             });
             el.innerHTML = html;
+            
+            // 延迟5秒后刷新 favicon（通过重新设置 src 触发浏览器重新请求）
+            setTimeout(() => {
+                console.log('Refreshing favicons after 5 seconds...');
+                list.forEach(item => {
+                    const card = document.querySelector(`.link-card[data-id="${item.id}"]`);
+                    if (card) {
+                        const imgElement = card.querySelector('.link-icon img');
+                        if (imgElement) {
+                            // 重新生成带新时间戳的 URL，触发浏览器重新请求
+                            const newFaviconUrl = getFaviconUrl(item);
+                            imgElement.src = newFaviconUrl;
+                            console.log('Refreshed favicon for:', item.name, '->', newFaviconUrl);
+                        }
+                    }
+                });
+            }, 5000);
         }
 
         // 加载 Tabs
@@ -557,7 +690,9 @@
                          ondragstart="handleTabDragStart(event)"
                          ondragend="handleTabDragEnd(event)"
                          ondragover="handleTabDragOver(event)"
-                         ondrop="handleTabDrop(event)">
+                         ondrop="handleTabDrop(event)"
+                         ondragenter="handleTabDragEnter(event)"
+                         ondragleave="handleTabDragLeave(event)">
                         ${activeIcon}<span class="tab-name" id="tab-name-${tab.id}" title="${t('doubleClickToEdit')}">${tab.name}</span>
                         ${closeBtn}
                     </div>
@@ -681,6 +816,16 @@
 
         // 添加 Tab
         async function addTab() {
+            const res = await fetch('/api/get');
+            const data = await res.json();
+            const tabs = data.tabs || [];
+            
+            // 检查是否已达到最大数量
+            if (tabs.length >= 5) {
+                showToast('最多只能创建5个选项卡', 'warning');
+                return;
+            }
+            
             // 使用递增的序号作为默认名称，根据语言显示
             const defaultName = currentLanguage === 'zh' ? `选项卡#${nextTabNumber}` : `Tab #${nextTabNumber}`;
             
@@ -793,11 +938,77 @@
             }
         }
 
+        // 拖动进入选项卡
+        function handleTabDragEnter(event) {
+            event.preventDefault();
+            const tab = event.target.closest('.tab-item');
+            if (tab && draggedLinkId) {
+                // 如果拖动的是站点卡片，高亮选项卡
+                tab.style.background = '#bee3f8';
+            }
+        }
+
+        // 拖动离开选项卡
+        function handleTabDragLeave(event) {
+            const tab = event.target.closest('.tab-item');
+            if (tab) {
+                tab.style.background = '';
+            }
+        }
+
         async function handleTabDrop(event) {
             event.preventDefault();
             const targetTab = event.target.closest('.tab-item');
             
-            if (!targetTab || !draggedTabElement || targetTab === draggedTabElement) {
+            // 重置样式
+            document.querySelectorAll('.tab-item').forEach(tab => {
+                tab.style.background = '';
+            });
+            
+            if (!targetTab) {
+                return;
+            }
+            
+            const targetTabId = parseInt(targetTab.dataset.tabId);
+            
+            // 如果拖动的是站点卡片
+            if (draggedLinkId) {
+                // 不能移动到当前选项卡
+                if (targetTabId === currentTabId) {
+                    draggedLinkId = null;
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/moveLinkToTab', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            linkId: draggedLinkId,
+                            fromTabId: currentTabId,
+                            toTabId: targetTabId
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    if (result.code === 0) {
+                        showToast('站点已移动', 'success');
+                        loadLinks();
+                        loadTabs();
+                    } else {
+                        showToast(result.message || '移动失败', 'error');
+                    }
+                } catch (error) {
+                    console.error('Move link error:', error);
+                    showToast('移动失败：' + error.message, 'error');
+                }
+                
+                draggedLinkId = null;
+                return;
+            }
+            
+            // 如果拖动的是选项卡（原有的逻辑）
+            if (!draggedTabElement || targetTab === draggedTabElement) {
                 return;
             }
 
@@ -943,14 +1154,17 @@
             });
         }
 
-        // 获取网站favicon - 使用国内可访问的服务
-        function getFaviconUrl(url) {
+        // 获取网站favicon - 使用 ID 作为参数，添加时间戳避免缓存
+        function getFaviconUrl(item) {
             try {
-                const domain = new URL(url).hostname;
-                // 使用 favicon.im 服务，国内可访问
-                return `https://favicon.im/${domain}`;
-            } catch {
-                return '';
+                // 返回 API 地址，使用 tabId 和 linkId 作为参数，添加时间戳
+                const timestamp = Date.now();
+                const faviconUrl = `/api/favicon/${currentTabId}/${item.id}?_ts=${timestamp}`;
+                console.log('Favicon URL for', item.name, '(ID:', item.id, '):', faviconUrl);
+                return faviconUrl;
+            } catch (e) {
+                console.error('Error generating favicon URL:', e);
+                return '/website.png';
             }
         }
 
@@ -1105,9 +1319,12 @@
         // 拖拽功能
         function handleDragStart(event) {
             draggedElement = event.target.closest('.link-card');
-            draggedElement.classList.add('dragging');
-            event.dataTransfer.effectAllowed = 'move';
-            event.dataTransfer.setData('text/html', draggedElement.innerHTML);
+            if (draggedElement) {
+                draggedLinkId = parseInt(draggedElement.dataset.id);
+                draggedElement.classList.add('dragging');
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/html', draggedElement.innerHTML);
+            }
         }
 
         function handleDragEnd(event) {
@@ -1118,6 +1335,7 @@
                     card.classList.remove('drag-over');
                 });
                 draggedElement = null;
+                draggedLinkId = null;
             }
         }
 
@@ -1367,6 +1585,91 @@
                 alert(t('moveLinkError') + error.message);
             }
         }
+
+        // 打开设置弹窗
+        async function openSettingsModal() {
+            try {
+                const response = await fetch('/api/getConfig');
+                const result = await response.json();
+                
+                if (result.code === 0) {
+                    document.getElementById('settingPort').value = result.port;
+                    document.getElementById('settingDebug').checked = result.debug;
+                    document.getElementById('settingsModal').style.display = 'flex';
+                } else {
+                    showToast(t('getConfigFailed'), 'error');
+                }
+            } catch (error) {
+                console.error('Get config error:', error);
+                showToast(t('getConfigFailed') + '：' + error.message, 'error');
+            }
+        }
+
+        // 关闭设置弹窗
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        // 保存设置
+        async function saveSettings() {
+            const port = document.getElementById('settingPort').value.trim();
+            const debug = document.getElementById('settingDebug').checked;
+            
+            if (!port) {
+                showToast(t('enterPort'), 'warning');
+                return;
+            }
+            
+            const portNum = parseInt(port);
+            if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+                showToast(t('invalidPort'), 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/saveConfig', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ port: portNum, debug: debug })
+                });
+                
+                const result = await response.json();
+                if (result.code === 0) {
+                    closeSettingsModal();
+                    showToast(t('configSaved'), 'success', 5000);
+                } else {
+                    showToast(t('configSaveFailed') + (result.message || t('unknownError')), 'error');
+                }
+            } catch (error) {
+                console.error('Save config error:', error);
+                showToast(t('configSaveFailed') + error.message, 'error');
+            }
+        }
+
+        // 刷新 Favicon
+        async function refreshFavicon(linkId) {
+            try {
+                const response = await fetch('/api/refreshFavicon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ linkId: linkId })
+                });
+                
+                const result = await response.json();
+                if (result.code === 0) {
+                    showToast('图标刷新中，请稍后刷新页面查看', 'info', 3000);
+                    // 延迟一下重新加载，给服务器时间下载
+                    setTimeout(() => {
+                        loadLinks();
+                    }, 2000);
+                } else {
+                    showToast('刷新失败：' + (result.message || '未知错误'), 'error');
+                }
+            } catch (error) {
+                console.error('Refresh favicon error:', error);
+                showToast('刷新失败：' + error.message, 'error');
+            }
+        }
         
         // ==================== Custom Dialog Functions ====================
         
@@ -1457,7 +1760,7 @@
     
     <!-- Footer -->
     <div class="footer">
-        (c) DSH-MyBookmark v1.0.0
+        Loading...
     </div>
     
     <!-- Toast Container -->
