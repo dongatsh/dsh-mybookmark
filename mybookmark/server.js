@@ -1008,10 +1008,22 @@ const server = http.createServer((req, res) => {
     try {
       // 每次请求时重新读取，确保获取最新值
       const constantsData = JSON.parse(fs.readFileSync(CONSTANT_FILE, 'utf8'));
+      
+      // 尝试从 config.json 读取自定义版权信息
+      let copyright = constantsData.copyright || '(c) DSH - MyBookmark';
+      try {
+        const configData = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+        if (configData.copyright) {
+          copyright = configData.copyright;
+        }
+      } catch (err) {
+        // 如果 config.json 不存在或读取失败，使用 constant.json 的值
+      }
+      
       res.end(JSON.stringify({ 
         code: 0, 
         version: constantsData.version || '1.0.0',
-        copyright: constantsData.copyright || '(c) DSH - MyBookmark',
+        copyright: copyright,
         url: constantsData.url || ''
       }));
     } catch (err) {
@@ -1033,22 +1045,35 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       try {
-        const { port, debug } = JSON.parse(body);
-        debugLog('Saving config:', { port, debug });
+        const { port, debug, copyright } = JSON.parse(body);
+        debugLog('Saving config:', { port, debug, copyright });
+        
+        // 读取现有配置
+        let existingConfig = {};
+        try {
+          existingConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+        } catch (err) {
+          // 如果读取失败，使用空对象
+        }
+        
+        // 更新配置
+        const newConfig = {
+          port: port ? parseInt(port) : existingConfig.port || 8080,
+          debug: debug === true || debug === 'true' || existingConfig.debug || false
+        };
+        
+        // 如果提供了版权信息，保存到配置中
+        if (copyright !== undefined) {
+          newConfig.copyright = copyright;
+        }
         
         // 验证端口
-        const portNum = parseInt(port);
+        const portNum = parseInt(newConfig.port);
         if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
           res.statusCode = 400;
           res.end(JSON.stringify({ code: 1, message: 'Invalid port number' }));
           return;
         }
-        
-        // 更新配置
-        const newConfig = {
-          port: portNum,
-          debug: debug === true || debug === 'true'
-        };
         
         fs.writeFileSync(CONFIG_FILE, JSON.stringify(newConfig, null, 2), 'utf8');
         debugLog('Config saved successfully');

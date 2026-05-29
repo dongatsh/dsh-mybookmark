@@ -232,6 +232,10 @@
                 <label style="display: block;margin-bottom: 5px;color: #4a5568;font-weight: bold;" data-i18n="portNumber">端口号：</label>
                 <input type="number" class="modal-input" id="settingPort" placeholder="8080" min="1" max="65535" style="margin-bottom: 5px;">
             </div>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block;margin-bottom: 5px;color: #4a5568;font-weight: bold;" data-i18n="copyright">版权信息：</label>
+                <input type="text" class="modal-input" id="settingCopyright" placeholder="(c) DSH - MyBookmark" style="margin-bottom: 0;">
+            </div>
             <div style="margin-bottom: 20px;">
                 <label style="display: flex;align-items: center;gap: 10px;cursor: pointer;">
                     <input type="checkbox" id="settingDebug" style="width: auto;margin: 0;">
@@ -243,9 +247,21 @@
                     ⚠️ <strong>注意：</strong>如果修改了端口，需要重启服务后才能生效。
                 </p>
             </div>
+            <div style="text-align: center;margin-bottom: 15px;display: flex;justify-content: center;gap: 20px;">
+                <a href="https://gitee.com/dongatsh/dsh-mybookmark/" target="_blank" style="color: #4299e1;text-decoration: none;font-size: 14px;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                    Gitee
+                </a>
+                |
+                <a href="https://gitee.com/dongatsh/dsh-mybookmark/issues" target="_blank" style="color: #4299e1;text-decoration: none;font-size: 14px;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                    Issue
+                </a>
+            </div>
             <div class="modal-buttons">
                 <button class="cancel-btn" onclick="closeSettingsModal()" data-i18n="cancel">取消</button>
                 <button class="save-btn" onclick="saveSettings()" data-i18n="save">保存</button>
+            </div>
+            <div style="text-align: center;margin-top: 15px;color: #a0aec0;font-size: 12px;">
+                <span id="settingVersion">v1.0.0</span>
             </div>
         </div>
     </div>
@@ -317,6 +333,7 @@
                 atLeastOneTab: '至少需要保留一个选项卡',
                 tabHasLinks: '该选项卡中有{count}个站点，请先清空后再删除',
                 settings: '设置',
+                copyright: '版权信息',
                 portNumber: '端口号',
                 debugMode: '开启调试模式',
                 restartRequired: '⚠️ 注意：如果修改了端口，需要重启服务后才能生效。',
@@ -390,6 +407,7 @@
                 atLeastOneTab: 'At least one tab must be kept',
                 tabHasLinks: 'This tab has {count} sites, please clear them first',
                 settings: 'Settings',
+                copyright: 'Copyright',
                 portNumber: 'Port Number',
                 debugMode: 'Enable Debug Mode',
                 restartRequired: '⚠️ Note: If you change the port, you need to restart the service for it to take effect.',
@@ -478,8 +496,7 @@
                 
                 const constants = {
                     version: result.version,
-                    copyright: result.copyright,
-                    url: result.url
+                    copyright: result.copyright
                 };
                 console.log('Constants loaded:', constants);
                 
@@ -488,24 +505,9 @@
                 console.log('Footer element:', footer);
                 
                 if (footer && constants.version && constants.copyright) {
-                    if (constants.url) {
-                        // 如果存在 URL，创建可点击的链接
-                        footer.innerHTML = `<a href="${constants.url}" target="_blank" style="color: #a0aec0; text-decoration: none;">${constants.copyright} v${constants.version}</a>`;
-                        // 添加悬停效果
-                        footer.querySelector('a').addEventListener('mouseenter', function() {
-                            this.style.color = '#4299e1';
-                            this.style.textDecoration = 'underline';
-                        });
-                        footer.querySelector('a').addEventListener('mouseleave', function() {
-                            this.style.color = '#a0aec0';
-                            this.style.textDecoration = 'none';
-                        });
-                        console.log('Footer updated with link');
-                    } else {
-                        // 如果没有 URL，显示纯文本
-                        footer.textContent = `${constants.copyright} v${constants.version}`;
-                        console.log('Footer updated with text');
-                    }
+                    // 只显示版权信息，不显示版本号
+                    footer.textContent = constants.copyright;
+                    console.log('Footer updated');
                 } else {
                     console.warn('Missing version or copyright in constants');
                 }
@@ -1589,12 +1591,25 @@
         // 打开设置弹窗
         async function openSettingsModal() {
             try {
-                const response = await fetch('/api/getConfig');
-                const result = await response.json();
+                // 获取配置
+                const configResponse = await fetch('/api/getConfig');
+                const configResult = await configResponse.json();
                 
-                if (result.code === 0) {
-                    document.getElementById('settingPort').value = result.port;
-                    document.getElementById('settingDebug').checked = result.debug;
+                // 获取常量信息
+                const constantsResponse = await fetch('/api/getConstants');
+                const constantsResult = await constantsResponse.json();
+                
+                if (configResult.code === 0) {
+                    document.getElementById('settingPort').value = configResult.port;
+                    document.getElementById('settingDebug').checked = configResult.debug;
+                    
+                    // 显示版权信息到输入框
+                    if (constantsResult.code === 0) {
+                        document.getElementById('settingCopyright').value = constantsResult.copyright || '';
+                        // 显示版本信息
+                        document.getElementById('settingVersion').textContent = `v${constantsResult.version || '1.0.0'}`;
+                    }
+                    
                     document.getElementById('settingsModal').style.display = 'flex';
                 } else {
                     showToast(t('getConfigFailed'), 'error');
@@ -1614,6 +1629,7 @@
         async function saveSettings() {
             const port = document.getElementById('settingPort').value.trim();
             const debug = document.getElementById('settingDebug').checked;
+            const copyright = document.getElementById('settingCopyright').value.trim();
             
             if (!port) {
                 showToast(t('enterPort'), 'warning');
@@ -1630,7 +1646,7 @@
                 const response = await fetch('/api/saveConfig', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ port: portNum, debug: debug })
+                    body: JSON.stringify({ port: portNum, debug: debug, copyright: copyright })
                 });
                 
                 const result = await response.json();
