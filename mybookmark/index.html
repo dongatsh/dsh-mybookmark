@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="favicon.png">
-    <title>我的网址收藏</title>
+    <title>我的收藏地址</title>
     <style>
         * {margin: 0;padding: 0;box-sizing: border-box;font-family: Arial, sans-serif;}
         body {max-width: 1200px;margin: 30px auto;padding: 0 20px;background: #f5f7fa;}
@@ -154,7 +154,7 @@
     </div>
     
     <div class="title-container">
-        <h1 class="title" id="pageTitle" ondblclick="startEditTitle()" data-i18n="pageTitle">我的网址收藏</h1>
+        <h1 class="title" id="pageTitle" ondblclick="startEditTitle()" data-i18n="pageTitle">我的收藏地址</h1>
         <input type="text" class="title-edit" id="titleEdit" onblur="saveTitle()" onkeypress="if(event.key==='Enter') saveTitle()">
     </div>
     <div class="add-box">
@@ -254,7 +254,7 @@
         // 语言配置
         const i18n = {
             zh: {
-                pageTitle: '我的网址收藏',
+                pageTitle: '我的收藏地址',
                 defaultTitle: '我的收藏地址',
                 defaultTabName: '我的常用站点',
                 largeIcon: '大图标',
