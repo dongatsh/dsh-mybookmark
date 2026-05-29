@@ -57,6 +57,18 @@ function writeData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
+// 确保URL有协议前缀
+function ensureUrlProtocol(url) {
+  if (!url) return url;
+  const trimmed = url.trim();
+  // 如果已经有协议前缀，直接返回
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  // 如果没有协议，添加 https://
+  return 'https://' + trimmed;
+}
+
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
@@ -123,7 +135,9 @@ const server = http.createServer((req, res) => {
         // 添加到当前tab
         const currentTab = data.tabs.find(t => t.id === data.currentTabId);
         if (currentTab) {
-          currentTab.links.push({ id: Date.now(), name: item.name, url: item.url });
+          // 确保URL有协议
+          const url = ensureUrlProtocol(item.url);
+          currentTab.links.push({ id: Date.now(), name: item.name, url: url });
         }
         writeData(data);
         res.end(JSON.stringify({ code: 0 }));
@@ -176,7 +190,8 @@ const server = http.createServer((req, res) => {
           console.log('Found index:', index);
           if (index !== -1) {
             currentTab.links[index].name = name;
-            currentTab.links[index].url = url;
+            // 确保URL有协议
+            currentTab.links[index].url = ensureUrlProtocol(url);
             console.log('Updated data:', data);
             writeData(data);
             console.log('Data written successfully');

@@ -118,7 +118,9 @@
         .tab-header {display: flex;align-items: flex-end;gap: 2px;background: transparent;padding: 0 15px;border-bottom: 2px solid #e2e8f0;overflow-x: auto;}
         .tab-item {padding: 12px 24px;background: #e2e8f0;border-radius: 8px 8px 0 0;cursor: pointer;font-size: 14px;color: #4a5568;transition: all 0.3s;white-space: nowrap;display: flex;align-items: center;gap: 8px;user-select: none;border: 1px solid #cbd5e0;border-bottom: none;margin-bottom: -2px;position: relative;}
         .tab-item:hover {background: #cbd5e0;}
-        .tab-item.active {background: #fff;color: #2d3748;border-color: #e2e8f0;font-weight: bold;z-index: 1;}
+        .tab-item.active {background: #fff;color: #2d3748;border-color: #e2e8f0;font-weight: bold;z-index: 1;box-shadow: 0 -2px 8px rgba(66, 153, 225, 0.15);}
+        .tab-item.active .tab-active-icon {display: inline-block;}
+        .tab-active-icon {display: none;margin-right: 4px;font-size: 14px;color: #4299e1;}
         .tab-item.dragging {opacity: 0.5;}
         .tab-item.drag-over {border-top: 3px solid #4299e1;}
         .tab-name {cursor: pointer;padding: 2px 5px;border-radius: 3px;}
@@ -548,6 +550,7 @@
             
             tabs.forEach((tab, index) => {
                 const activeClass = tab.id === currentTabId ? 'active' : '';
+                const activeIcon = tab.id === currentTabId ? '<span class="tab-active-icon">●</span>' : '';
                 const closeBtn = tabs.length > 1 ? `<span class="tab-close" onclick="deleteTab(${tab.id}, event)">×</span>` : '';
                 html += `
                     <div class="tab-item ${activeClass}" draggable="true" data-tab-id="${tab.id}"
@@ -555,7 +558,7 @@
                          ondragend="handleTabDragEnd(event)"
                          ondragover="handleTabDragOver(event)"
                          ondrop="handleTabDrop(event)">
-                        <span class="tab-name" id="tab-name-${tab.id}" title="${t('doubleClickToEdit')}">${tab.name}</span>
+                        ${activeIcon}<span class="tab-name" id="tab-name-${tab.id}" title="${t('doubleClickToEdit')}">${tab.name}</span>
                         ${closeBtn}
                     </div>
                 `;
@@ -875,15 +878,30 @@
             }
         }
 
+        // 确保URL有协议前缀
+        function ensureUrlProtocol(url) {
+            if (!url) return url;
+            const trimmed = url.trim();
+            // 如果已经有协议前缀，直接返回
+            if (/^https?:\/\//i.test(trimmed)) {
+                return trimmed;
+            }
+            // 如果没有协议，添加 https://
+            return 'https://' + trimmed;
+        }
+
         // 保存添加的链接
         async function saveAddLink() {
             let name = document.getElementById('addName').value.trim();
-            const url = document.getElementById('addUrl').value.trim();
+            let url = document.getElementById('addUrl').value.trim();
             
             if (!url) {
                 showToast(t('fillUrl'), 'warning');
                 return;
             }
+            
+            // 确保URL有协议
+            url = ensureUrlProtocol(url);
             
             // 如果名称为空，自动从 URL 提取
             if (!name) {
@@ -979,11 +997,15 @@
         // 保存编辑
         async function saveEdit() {
             const name = document.getElementById('editName').value.trim();
-            const url = document.getElementById('editUrl').value.trim();
+            let url = document.getElementById('editUrl').value.trim();
             if (!name || !url) {
                 showToast(t('fillNameAndUrl'), 'warning');
                 return;
             }
+            
+            // 确保URL有协议
+            url = ensureUrlProtocol(url);
+            
             try {
                 const response = await fetch('/api/update', {
                     method: 'POST',

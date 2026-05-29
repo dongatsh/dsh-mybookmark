@@ -28,6 +28,12 @@ v1.0.0
 
 ## 修改端口
 
+* 把 mybookmark/config.json.sample 复制 config.json
+
+```
+    cp config.json.sample config.json
+```
+
 * 修改 mybookmark/config.json 文件
 
 ```json

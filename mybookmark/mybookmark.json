@@ -1,0 +1,28 @@
+{
+  "title": "我的收藏地址",
+  "iconSize": "medium",
+  "currentTabId": 1,
+  "tabs": [
+    {
+      "id": 1,
+      "name": "我的常用站点",
+      "links": [
+        {
+          "id": 1780028276448,
+          "name": "gitee",
+          "url": "https://gitee.com"
+        }
+      ]
+    },
+    {
+      "id": 1780028390880,
+      "name": "选项卡#2",
+      "links": []
+    },
+    {
+      "id": 1780028396607,
+      "name": "选项卡#3",
+      "links": []
+    }
+  ]
+}
