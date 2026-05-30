@@ -60,7 +60,7 @@ function readData() {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
     // 如果是旧格式（数组），转换为新格式
     if (Array.isArray(data)) {
-      return { title: '我的收藏地址', iconSize: 'medium', tabs: [{ id: 1, name: '我的常用站点', links: data }] };
+      return { title: '我的收藏夹', iconSize: 'medium', tabs: [{ id: 1, name: '我的常用站点', links: data }] };
     }
     // 确保有默认值
     if (!data.iconSize) {
@@ -79,7 +79,7 @@ function readData() {
     // 如果文件不存在或解析失败，创建默认数据
     // 这里使用中文作为默认语言，前端会根据用户选择切换
     const defaultData = { 
-      title: '我的收藏地址', 
+      title: '我的收藏夹', 
       iconSize: 'medium', 
       currentTabId: 1,
       tabs: [{ id: 1, name: '我的常用站点', links: [] }] 
@@ -193,7 +193,7 @@ function downloadFavicon(domain, callback) {
                 callback(null, faviconPath);
               });
               stream.on('error', err => {
-                console.error(`Error saving favicon: ${err.message}`);
+                console.error(`Error saving favicon: ${currentUrl}: ${err.message}`);
                 callback(null, faviconPath);
               });
             } else {
@@ -201,7 +201,7 @@ function downloadFavicon(domain, callback) {
               callback(null, faviconPath);
             }
           }).on('error', err => {
-            console.error(`Error following redirect: ${err.message}`);
+            console.error(`Error following redirect:${currentUrl}: ${err.message}`);
             callback(null, faviconPath);
           });
           return;
@@ -244,7 +244,7 @@ function downloadFavicon(domain, callback) {
         tryDownload();
       }
     }).on('error', err => {
-      console.error(`Error downloading favicon: ${err.message}`);
+      console.error(`Error downloading favicon: ${currentUrl}: ${err.message}`);
       currentIndex++;
       tryDownload();
     }).setTimeout(5000, () => {
@@ -418,6 +418,21 @@ const server = http.createServer((req, res) => {
         res.statusCode = 500;
         res.end('页面加载失败');
       } else {
+        res.end(content);
+      }
+    });
+    return;
+  }
+
+  // CSS 文件
+  if (pathname === '/style.css') {
+    res.setHeader('Content-Type', 'text/css;charset=utf-8');
+    fs.readFile(path.join(__dirname, 'style.css'), (err, content) => {
+      if (err) {
+        res.statusCode = 404;
+        res.end('CSS file not found');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 缓存1天
         res.end(content);
       }
     });
