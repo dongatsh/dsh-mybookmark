@@ -60,6 +60,7 @@
             <h3 data-i18n="editBookmark">编辑收藏</h3>
             <input type="text" class="modal-input" id="editName" placeholder="网址名称（可为空）" data-i18n-placeholder="bookmarkNamePlaceholder">
             <input type="url" class="modal-input" id="editUrl" placeholder="完整网址 https://" data-i18n-placeholder="fullUrlPlaceholder">
+            <input type="text" class="modal-input" id="editNote" placeholder="说明" data-i18n-placeholder="notePlaceholder" style="margin-bottom: 0;">
             <div class="modal-buttons">
                 <button class="cancel-btn" onclick="closeEditModal()" data-i18n="cancel">取消</button>
                 <button class="save-btn" onclick="saveEdit()" data-i18n="save">保存</button>
@@ -73,6 +74,7 @@
             <h3 data-i18n="addBookmark">添加收藏</h3>
             <input type="text" class="modal-input" id="addName" placeholder="网址名称（可为空，将自动提取）" data-i18n-placeholder="bookmarkNameAutoPlaceholder">
             <input type="url" class="modal-input" id="addUrl" placeholder="完整网址 https://" oninput="autoFillName()" data-i18n-placeholder="fullUrlPlaceholder">
+            <input type="text" class="modal-input" id="addNote" placeholder="说明" data-i18n-placeholder="notePlaceholder" style="margin-bottom: 0;">
             <div class="modal-buttons">
                 <button class="cancel-btn" onclick="closeAddModal()" data-i18n="cancel">取消</button>
                 <button class="save-btn" onclick="saveAddLink()" data-i18n="add">添加</button>
@@ -174,6 +176,7 @@
                 bookmarkNamePlaceholder: '网址名称（可为空）',
                 bookmarkNameAutoPlaceholder: '网址名称（可为空，将自动提取）',
                 fullUrlPlaceholder: '完整网址 https://',
+                notePlaceholder: '说明',
                 cancel: '取消',
                 save: '保存',
                 add: '添加',
@@ -254,6 +257,7 @@
                 bookmarkNamePlaceholder: 'Website name (optional)',
                 bookmarkNameAutoPlaceholder: 'Website name (optional, auto-extracted)',
                 fullUrlPlaceholder: 'Full URL https://',
+                notePlaceholder: 'Note',
                 cancel: 'Cancel',
                 save: 'Save',
                 add: 'Add',
@@ -476,6 +480,7 @@
                         <div class="card-content">
                             <div class="link-name">${item.name}</div>
                             <div class="link-url"><a href="${item.url}" target="_blank">${item.url}</a></div>
+                            ${item.note ? `<div class="link-note">${item.note}</div>` : ''}
                         </div>
                         <div class="card-actions">
                             <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')">${t('openButton')}</button>
@@ -498,6 +503,7 @@
                         </div>
                         <div class="link-name">${item.name}</div>
                         <div class="link-url"><a href="${item.url}" target="_blank">${item.url}</a></div>
+                        ${item.note ? `<div class="link-note">${item.note}</div>` : ''}
                         <div class="card-actions">
                             <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')">${t('openButton')}</button>
                             <button class="card-btn edit-btn" onclick="openEditModal(${item.id})">${t('editButton')}</button>
@@ -1011,6 +1017,7 @@
         async function saveAddLink() {
             let name = document.getElementById('addName').value.trim();
             let url = document.getElementById('addUrl').value.trim();
+            const note = document.getElementById('addNote').value.trim();
             
             if (!url) {
                 showToast(t('fillUrl'), 'warning');
@@ -1036,7 +1043,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ name, url })
+                    body: JSON.stringify({ name, url, note })
                 });
                 closeAddModal();
                 loadLinks();
@@ -1104,6 +1111,7 @@
             if (item) {
                 document.getElementById('editName').value = item.name;
                 document.getElementById('editUrl').value = item.url;
+                document.getElementById('editNote').value = item.note || '';
                 document.getElementById('editModal').style.display = 'flex';
             }
         }
@@ -1118,6 +1126,7 @@
         async function saveEdit() {
             const name = document.getElementById('editName').value.trim();
             let url = document.getElementById('editUrl').value.trim();
+            const note = document.getElementById('editNote').value.trim();
             if (!name || !url) {
                 showToast(t('fillNameAndUrl'), 'warning');
                 return;
@@ -1132,7 +1141,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ id: currentEditId, name, url })
+                    body: JSON.stringify({ id: currentEditId, name, url, note })
                 });
                 const result = await response.json();
                 console.log('Update result:', result);
@@ -1397,8 +1406,17 @@
                 let filename;
                 
                 if (scope === 'all') {
-                    // 导出全部数据
-                    exportData = data;
+                    // 导出全部数据，包含 config.json
+                    const configRes = await fetch('/api/getConfig');
+                    const configData = await configRes.json();
+                    
+                    exportData = {
+                        ...data,
+                        config: {
+                            port: configData.port,
+                            copyright: configData.copyright
+                        }
+                    };
                     filename = `mybookmark_full_backup_${new Date().getTime()}.json`;
                 } else {
                     // 导出单个选项卡
@@ -1469,6 +1487,26 @@
                         event.target.value = ''; // 清空文件选择
                         return;
                     }
+                
+                // 如果包含 config，先保存配置
+                if (data.config) {
+                    try {
+                        await fetch('/api/saveConfig', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                port: data.config.port,
+                                copyright: data.config.copyright
+                            })
+                        });
+                        console.log('Config imported successfully');
+                    } catch (configError) {
+                        console.error('Failed to import config:', configError);
+                        // 配置导入失败不影响书签导入
+                    }
+                }
                 
                 const response = await fetch('/api/import', {
                     method: 'POST',
@@ -1573,13 +1611,17 @@
                 const configResponse = await fetch('/api/getConfig');
                 const configResult = await configResponse.json();
                 
+                // 获取系统配置 (debug)
+                const systemConfigResponse = await fetch('/api/getSystemConfig');
+                const systemConfigResult = await systemConfigResponse.json();
+                
                 // 获取常量信息
                 const constantsResponse = await fetch('/api/getConstants');
                 const constantsResult = await constantsResponse.json();
                 
-                if (configResult.code === 0) {
+                if (configResult.code === 0 && systemConfigResult.code === 0) {
                     document.getElementById('settingPort').value = configResult.port;
-                    document.getElementById('settingDebug').checked = configResult.debug;
+                    document.getElementById('settingDebug').checked = systemConfigResult.debug;
                     
                     // 显示版权信息到输入框
                     if (constantsResult.code === 0) {
@@ -1621,18 +1663,32 @@
             }
             
             try {
-                const response = await fetch('/api/saveConfig', {
+                // 保存 config.json 配置
+                const configResponse = await fetch('/api/saveConfig', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ port: portNum, debug: debug, copyright: copyright })
+                    body: JSON.stringify({ port: portNum, copyright: copyright })
                 });
                 
-                const result = await response.json();
-                if (result.code === 0) {
+                const configResult = await configResponse.json();
+                if (configResult.code !== 0) {
+                    showToast(t('configSaveFailed') + (configResult.message || t('unknownError')), 'error');
+                    return;
+                }
+                
+                // 保存 system 配置 (debug)
+                const systemConfigResponse = await fetch('/api/saveSystemConfig', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ debug: debug })
+                });
+                
+                const systemConfigResult = await systemConfigResponse.json();
+                if (systemConfigResult.code === 0) {
                     closeSettingsModal();
                     showToast(t('configSaved'), 'success', 5000);
                 } else {
-                    showToast(t('configSaveFailed') + (result.message || t('unknownError')), 'error');
+                    showToast(t('configSaveFailed') + (systemConfigResult.message || t('unknownError')), 'error');
                 }
             } catch (error) {
                 console.error('Save config error:', error);

@@ -36,17 +36,217 @@ const PORT = config.port || 8080;
 const DATA_FILE = path.join(__dirname, 'mybookmark.json');
 const FAVICONS_DIR = path.join(__dirname, 'favicons');
 const DEFAULT_FAVICON = path.join(__dirname, 'website.png');
+const SETTING_FILE = path.join(__dirname, 'setting.ini');
 
 // 确保 favicons 目录存在
 if (!fs.existsSync(FAVICONS_DIR)) {
   fs.mkdirSync(FAVICONS_DIR, { recursive: true });
 }
 
+// 确保 setting.ini 文件存在
+if (!fs.existsSync(SETTING_FILE)) {
+  fs.writeFileSync(SETTING_FILE, '[system]\n# Debug mode: true or false\ndebug=false\n\n[favicon]\n# Format: domain=YYYY-MM-DD\n# Records domains where favicon download failed on a specific date\n# Failed favicons will not be retried on the same day\n', 'utf8');
+}
+
+// 读取 setting.ini 中的 favicon 失败记录
+function readFaviconFailures() {
+  try {
+    const content = fs.readFileSync(SETTING_FILE, 'utf8');
+    const failures = {};
+    const lines = content.split('\n');
+    let inFaviconSection = false;
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      if (trimmed === '[favicon]') {
+        inFaviconSection = true;
+        continue;
+      }
+      
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        inFaviconSection = false;
+        continue;
+      }
+      
+      if (inFaviconSection && trimmed && !trimmed.startsWith('#')) {
+        const match = trimmed.match(/^([^=]+)=(.+)$/);
+        if (match) {
+          const domain = match[1].trim();
+          const date = match[2].trim();
+          failures[domain] = date;
+        }
+      }
+    }
+    
+    return failures;
+  } catch (err) {
+    console.error('Failed to read setting.ini:', err.message);
+    return {};
+  }
+}
+
+// 写入 favicon 失败记录到 setting.ini
+function writeFaviconFailure(domain, date) {
+  try {
+    const content = fs.readFileSync(SETTING_FILE, 'utf8');
+    const lines = content.split('\n');
+    let inFaviconSection = false;
+    let updated = false;
+    const newLines = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      
+      if (trimmed === '[favicon]') {
+        inFaviconSection = true;
+        newLines.push(line);
+        continue;
+      }
+      
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        inFaviconSection = false;
+        newLines.push(line);
+        continue;
+      }
+      
+      if (inFaviconSection && trimmed && !trimmed.startsWith('#')) {
+        const match = trimmed.match(/^([^=]+)=(.+)$/);
+        if (match && match[1].trim() === domain) {
+          // 更新现有记录
+          newLines.push(`${domain}=${date}`);
+          updated = true;
+          continue;
+        }
+      }
+      
+      newLines.push(line);
+    }
+    
+    // 如果没有找到该域名的记录，添加到 [favicon] 小节末尾
+    if (!updated && inFaviconSection) {
+      newLines.push(`${domain}=${date}`);
+    } else if (!updated) {
+      // 如果不在任何小节中，添加到文件末尾
+      newLines.push('[favicon]');
+      newLines.push(`${domain}=${date}`);
+    }
+    
+    fs.writeFileSync(SETTING_FILE, newLines.join('\n'), 'utf8');
+    debugLog(`Recorded favicon failure for ${domain} on ${date}`);
+  } catch (err) {
+    console.error('Failed to write setting.ini:', err.message);
+  }
+}
+
+// 检查域名是否在当天已经失败过
+function isFaviconFailedToday(domain) {
+  const failures = readFaviconFailures();
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  const failedDate = failures[domain];
+  
+  return failedDate === today;
+}
+
+// 读取 setting.ini 中的 system 配置
+function readSystemConfig() {
+  try {
+    const content = fs.readFileSync(SETTING_FILE, 'utf8');
+    const config = {};
+    const lines = content.split('\n');
+    let inSystemSection = false;
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      if (trimmed === '[system]') {
+        inSystemSection = true;
+        continue;
+      }
+      
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        inSystemSection = false;
+        continue;
+      }
+      
+      if (inSystemSection && trimmed && !trimmed.startsWith('#')) {
+        const match = trimmed.match(/^([^=]+)=(.+)$/);
+        if (match) {
+          const key = match[1].trim();
+          const value = match[2].trim();
+          config[key] = value;
+        }
+      }
+    }
+    
+    return config;
+  } catch (err) {
+    console.error('Failed to read system config from setting.ini:', err.message);
+    return { debug: 'false' };
+  }
+}
+
+// 写入 system 配置到 setting.ini
+function writeSystemConfig(key, value) {
+  try {
+    const content = fs.readFileSync(SETTING_FILE, 'utf8');
+    const lines = content.split('\n');
+    let inSystemSection = false;
+    let updated = false;
+    const newLines = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      
+      if (trimmed === '[system]') {
+        inSystemSection = true;
+        newLines.push(line);
+        continue;
+      }
+      
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        inSystemSection = false;
+        newLines.push(line);
+        continue;
+      }
+      
+      if (inSystemSection && trimmed && !trimmed.startsWith('#')) {
+        const match = trimmed.match(/^([^=]+)=(.+)$/);
+        if (match && match[1].trim() === key) {
+          // 更新现有配置
+          newLines.push(`${key}=${value}`);
+          updated = true;
+          continue;
+        }
+      }
+      
+      newLines.push(line);
+    }
+    
+    // 如果没有找到该配置项，添加到 [system] 小节末尾
+    if (!updated && inSystemSection) {
+      newLines.push(`${key}=${value}`);
+    } else if (!updated) {
+      // 如果不在任何小节中，添加到文件末尾
+      newLines.push('[system]');
+      newLines.push(`${key}=${value}`);
+    }
+    
+    fs.writeFileSync(SETTING_FILE, newLines.join('\n'), 'utf8');
+    debugLog(`Updated system config: ${key}=${value}`);
+  } catch (err) {
+    console.error('Failed to write system config to setting.ini:', err.message);
+  }
+}
+
 // 调试日志函数 - 每次调用时动态读取配置
 function debugLog(...args) {
   try {
-    const currentConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-    if (currentConfig.debug) {
+    const systemConfig = readSystemConfig();
+    const debugMode = systemConfig.debug === 'true';
+    if (debugMode) {
       console.log(...args);
     }
   } catch (err) {
@@ -133,6 +333,13 @@ function downloadFavicon(domain, callback) {
     return;
   }
   
+  // 检查今天是否已经失败过
+  if (isFaviconFailedToday(domain)) {
+    debugLog(`⊘ Skipping favicon download for ${domain} - already failed today`);
+    callback(null, faviconPath);
+    return;
+  }
+  
   // 构建尝试的 URL 列表，避免重复添加 www
   const urls = [];
   const hasWww = domain.startsWith('www.');
@@ -153,8 +360,10 @@ function downloadFavicon(domain, callback) {
   
   function tryDownload() {
     if (currentIndex >= urls.length) {
-      // 所有尝试都失败，使用默认图标
-      debugLog(`Failed to download favicon for ${domain}, using default`);
+      // 所有尝试都失败，记录到 setting.ini
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      debugLog(`Failed to download favicon for ${domain}, recording failure and using default`);
+      writeFaviconFailure(domain, today);
       // 返回预期路径，但文件实际上不存在
       callback(null, faviconPath);
       return;
@@ -470,7 +679,12 @@ const server = http.createServer((req, res) => {
         if (currentTab) {
           // 确保URL有协议
           const url = ensureUrlProtocol(item.url);
-          currentTab.links.push({ id: Date.now(), name: item.name, url: url });
+          const newLink = { id: Date.now(), name: item.name, url: url };
+          // 如果有 note，也保存
+          if (item.note) {
+            newLink.note = item.note;
+          }
+          currentTab.links.push(newLink);
         }
         writeData(data);
         res.end(JSON.stringify({ code: 0 }));
@@ -513,8 +727,8 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       try {
-        const { id, name, url } = JSON.parse(body);
-        debugLog('Updating bookmark:', { id, name, url });
+        const { id, name, url, note } = JSON.parse(body);
+        debugLog('Updating bookmark:', { id, name, url, note });
         const data = readData();
         // 在当前tab中查找并更新
         const currentTab = data.tabs.find(t => t.id === data.currentTabId);
@@ -527,6 +741,10 @@ const server = http.createServer((req, res) => {
             // 确保URL有协议
             const newUrl = ensureUrlProtocol(url);
             currentTab.links[index].url = newUrl;
+            // 更新 note
+            if (note !== undefined) {
+              currentTab.links[index].note = note;
+            }
             debugLog('Updated data:', data);
             writeData(data);
             debugLog('Data written successfully');
@@ -1008,11 +1226,27 @@ const server = http.createServer((req, res) => {
       res.end(JSON.stringify({ 
         code: 0, 
         port: configData.port || 8080,
-        debug: configData.debug || false
+        copyright: configData.copyright || ''
       }));
     } catch (err) {
       res.statusCode = 500;
       res.end(JSON.stringify({ code: 1, message: 'Failed to read config' }));
+    }
+    return;
+  }
+
+  // 获取系统配置
+  if (pathname === '/api/getSystemConfig' && req.method === 'GET') {
+    res.setHeader('Content-Type', 'application/json;charset=utf-8');
+    try {
+      const systemConfig = readSystemConfig();
+      res.end(JSON.stringify({ 
+        code: 0, 
+        debug: systemConfig.debug === 'true'
+      }));
+    } catch (err) {
+      res.statusCode = 500;
+      res.end(JSON.stringify({ code: 1, message: 'Failed to read system config' }));
     }
     return;
   }
@@ -1060,8 +1294,8 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       try {
-        const { port, debug, copyright } = JSON.parse(body);
-        debugLog('Saving config:', { port, debug, copyright });
+        const { port, copyright } = JSON.parse(body);
+        debugLog('Saving config:', { port, copyright });
         
         // 读取现有配置
         let existingConfig = {};
@@ -1071,10 +1305,9 @@ const server = http.createServer((req, res) => {
           // 如果读取失败，使用空对象
         }
         
-        // 更新配置
+        // 更新端口和版权信息到 config.json
         const newConfig = {
-          port: port ? parseInt(port) : existingConfig.port || 8080,
-          debug: debug === true || debug === 'true' || existingConfig.debug || false
+          port: port ? parseInt(port) : existingConfig.port || 8080
         };
         
         // 如果提供了版权信息，保存到配置中
@@ -1091,10 +1324,37 @@ const server = http.createServer((req, res) => {
         }
         
         fs.writeFileSync(CONFIG_FILE, JSON.stringify(newConfig, null, 2), 'utf8');
+        
         debugLog('Config saved successfully');
         res.end(JSON.stringify({ code: 0 }));
       } catch (err) {
         console.error('Save config error:', err);
+        res.statusCode = 500;
+        res.end(JSON.stringify({ code: 1, message: 'Server error' }));
+      }
+    });
+    return;
+  }
+
+  // 保存系统配置
+  if (pathname === '/api/saveSystemConfig' && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json;charset=utf-8');
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const { debug } = JSON.parse(body);
+        debugLog('Saving system config:', { debug });
+        
+        // 将 debug 设置保存到 setting.ini
+        if (debug !== undefined) {
+          writeSystemConfig('debug', debug === true || debug === 'true' ? 'true' : 'false');
+        }
+        
+        debugLog('System config saved successfully');
+        res.end(JSON.stringify({ code: 0 }));
+      } catch (err) {
+        console.error('Save system config error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -1188,7 +1448,12 @@ server.listen(PORT, () => {
   console.log(`服务已启动，访问：http://localhost:${PORT}`);
   console.log(`数据文件：${DATA_FILE}`);
   console.log(`配置文件：${CONFIG_FILE}`);
+  console.log(`系统设置：${SETTING_FILE}`);
   console.log(`端口号：${config.port || 8080}`);
-  console.log(`调试模式：${config.debug ? '开启' : '关闭'}`);
+  
+  // 从 setting.ini 读取 debug 配置
+  const systemConfig = readSystemConfig();
+  const debugMode = systemConfig.debug === 'true';
+  console.log(`调试模式：${debugMode ? '开启' : '关闭'}`);
   console.log('');
 });
