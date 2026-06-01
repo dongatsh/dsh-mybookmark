@@ -20,8 +20,9 @@
                 </div>
                 
                 <!-- 中间：标题 -->
-                <h2 class="title" id="toolbarTitle" ondblclick="startEditTitle()" data-i18n="pageTitle" style="font-size: 20px;margin: 0;cursor: pointer;padding: 8px 15px;border-radius: 6px;transition: background 0.3s;color: #2d3748;">我的收藏夹</h2>
-                <input type="text" class="title-edit" id="toolbarTitleEdit" onblur="saveTitle()" onkeypress="if(event.key==='Enter') saveTitle()" style="font-size: 20px;padding: 8px 15px;">
+                <div style="display: flex;align-items: center;gap: 8px;">
+                    <h2 class="title" id="toolbarTitle" data-i18n="pageTitle" style="font-size: 20px;margin: 0;cursor: default;padding: 8px 15px;border-radius: 6px;transition: background 0.3s;color: #2d3748;flex-shrink: 0;">我的收藏夹</h2>
+                </div>
                 
                 <!-- 右侧：操作按钮 -->
                 <div style="display: flex;gap: 10px;flex-shrink: 0;">
@@ -98,6 +99,10 @@
     <div class="modal-overlay" id="settingsModal">
         <div class="modal">
             <h3>⚙ <span data-i18n="settings">系统设置</span></h3>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block;margin-bottom: 5px;color: #4a5568;font-weight: bold;" data-i18n="pageTitle">页面标题：</label>
+                <input type="text" class="modal-input" id="settingTitle" placeholder="我的收藏夹" style="margin-bottom: 0;">
+            </div>
             <div style="margin-bottom: 15px;">
                 <label style="display: block;margin-bottom: 5px;color: #4a5568;font-weight: bold;" data-i18n="portNumber">端口号：</label>
                 <input type="number" class="modal-input" id="settingPort" placeholder="8080" min="1" max="65535" style="margin-bottom: 5px;">
@@ -611,6 +616,7 @@
                 const activeClass = tab.id === currentTabId ? 'active' : '';
                 const activeIcon = tab.id === currentTabId ? '<span class="tab-active-icon">●</span>' : '';
                 const closeBtn = tabs.length > 1 ? `<span class="tab-close" onclick="deleteTab('${tab.id}', event)">×</span>` : '';
+                const siteCount = tab.links ? tab.links.length : 0;
                 html += `
                     <div class="tab-item ${activeClass}" draggable="true" data-tab-id="${tab.id}"
                          ondragstart="handleTabDragStart(event)"
@@ -620,6 +626,7 @@
                          ondragenter="handleTabDragEnter(event)"
                          ondragleave="handleTabDragLeave(event)">
                         ${activeIcon}<span class="tab-name" id="tab-name-${tab.id}" title="${t('doubleClickToEdit')}">${tab.name}</span>
+                        <span class="tab-count">(${siteCount})</span>
                         ${closeBtn}
                     </div>
                 `;
@@ -661,35 +668,66 @@
         // 开始编辑 Tab 名称
         function startEditTabName(tabId, element) {
             const currentName = element.textContent;
+            
+            // 创建容器
+            const container = document.createElement('div');
+            container.style.display = 'flex';
+            container.style.alignItems = 'center';
+            container.style.gap = '4px';
+            
             const input = document.createElement('input');
             input.type = 'text';
             input.className = 'tab-name-input';
             input.value = currentName;
+            input.style.flex = '1';
+            
+            // 创建取消按钮
+            const cancelBtn = document.createElement('button');
+            cancelBtn.innerHTML = '×';
+            cancelBtn.style.cssText = 'background: #e53e3e;color: white;border: none;border-radius: 3px;width: 20px;height: 20px;cursor: pointer;font-size: 14px;display: flex;align-items: center;justify-content: center;padding: 0;line-height: 1;flex-shrink: 0;';
+            
+            container.appendChild(input);
+            container.appendChild(cancelBtn);
             
             // 阻止事件冒泡，避免触发 Tab 切换
-            input.addEventListener('click', (e) => e.stopPropagation());
-            input.addEventListener('dblclick', (e) => e.stopPropagation());
+            container.addEventListener('click', (e) => e.stopPropagation());
+            container.addEventListener('dblclick', (e) => e.stopPropagation());
             
-            element.replaceWith(input);
+            element.replaceWith(container);
             input.focus();
             input.select();
             
+            let isCancelled = false;
+            
             // 失去焦点或按回车时保存
             const saveEdit = () => {
+                if (isCancelled) return;
+                
                 const newName = input.value.trim();
                 if (newName && newName !== currentName) {
                     updateTabName(tabId, newName);
                 } else if (!newName) {
                     // 如果名称为空，恢复原名称
                     showToast(t('tabNameCannotEmpty'), 'warning');
-                    input.replaceWith(createTabNameElement(currentName, tabId));
+                    isCancelled = true;
+                    container.replaceWith(createTabNameElement(currentName, tabId));
                 } else {
                     // 名称未改变，恢复原样
-                    input.replaceWith(createTabNameElement(currentName, tabId));
+                    isCancelled = true;
+                    container.replaceWith(createTabNameElement(currentName, tabId));
                 }
             };
             
-            input.addEventListener('blur', saveEdit);
+            // 点击取消按钮
+            cancelBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                isCancelled = true;
+                container.replaceWith(createTabNameElement(currentName, tabId));
+            });
+            
+            input.addEventListener('blur', () => {
+                setTimeout(saveEdit, 100); // 延迟执行，让取消按钮点击先处理
+            });
             input.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     saveEdit();
@@ -699,7 +737,8 @@
             // 按ESC取消
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
-                    input.replaceWith(createTabNameElement(currentName, tabId));
+                    isCancelled = true;
+                    container.replaceWith(createTabNameElement(currentName, tabId));
                 }
             });
         }
@@ -1007,6 +1046,7 @@
         function openAddModal() {
             document.getElementById('addName').value = '';
             document.getElementById('addUrl').value = '';
+            document.getElementById('addNote').value = ''; // 清空备注字段
             document.getElementById('addModal').style.display = 'flex';
         }
 
@@ -1235,54 +1275,6 @@
                     document.title = savedTitle;
                 }
             }
-        }
-
-        // 开始编辑标题
-        function startEditTitle() {
-            const toolbarTitleEl = document.getElementById('toolbarTitle');
-            const toolbarEditEl = document.getElementById('toolbarTitleEdit');
-            
-            if (!toolbarTitleEl || !toolbarEditEl) return;
-            
-            const currentTitle = toolbarTitleEl.textContent;
-            
-            toolbarEditEl.value = currentTitle;
-            toolbarTitleEl.style.display = 'none';
-            toolbarEditEl.style.display = 'block';
-            toolbarEditEl.focus();
-            toolbarEditEl.select();
-        }
-
-        // 保存标题
-        async function saveTitle() {
-            const toolbarTitleEl = document.getElementById('toolbarTitle');
-            const toolbarEditEl = document.getElementById('toolbarTitleEdit');
-            
-            if (!toolbarTitleEl || !toolbarEditEl) return;
-            
-            const newTitle = toolbarEditEl.value.trim();
-            
-            if (newTitle) {
-                toolbarTitleEl.textContent = newTitle;
-                // 同时更新页面 title 标签
-                document.title = newTitle;
-                // 保存到服务器
-                try {
-                    await fetch('/api/updateTitle', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ title: newTitle })
-                    });
-                    console.log('Title saved to server');
-                } catch (error) {
-                    console.error('Save title error:', error);
-                }
-            }
-            
-            toolbarEditEl.style.display = 'none';
-            toolbarTitleEl.style.display = 'inline-block';
         }
 
         // 拖拽功能
@@ -1658,7 +1650,14 @@
                 const constantsResponse = await fetch('/api/getConstants');
                 const constantsResult = await constantsResponse.json();
                 
+                // 获取标题
+                const titleResponse = await fetch('/api/get');
+                const titleResult = await titleResponse.json();
+                
                 if (configResult.code === 0 && systemConfigResult.code === 0) {
+                    // 设置标题
+                    document.getElementById('settingTitle').value = titleResult.title || '';
+                    
                     document.getElementById('settingPort').value = configResult.port;
                     document.getElementById('settingDebug').checked = systemConfigResult.debug;
                     
@@ -1686,6 +1685,7 @@
 
         // 保存设置
         async function saveSettings() {
+            const title = document.getElementById('settingTitle').value.trim();
             const port = document.getElementById('settingPort').value.trim();
             const debug = document.getElementById('settingDebug').checked;
             const copyright = document.getElementById('settingCopyright').value.trim();
@@ -1702,6 +1702,24 @@
             }
             
             try {
+                // 保存标题
+                if (title) {
+                    await fetch('/api/updateTitle', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ title: title })
+                    });
+                    // 更新页面显示
+                    const toolbarTitleEl = document.getElementById('toolbarTitle');
+                    if (toolbarTitleEl) {
+                        toolbarTitleEl.textContent = title;
+                    }
+                    document.title = title;
+                    console.log('Title saved');
+                }
+                
                 // 保存 config.json 配置
                 const configResponse = await fetch('/api/saveConfig', {
                     method: 'POST',
