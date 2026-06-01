@@ -10,16 +10,16 @@ let config;
 try {
   if (fs.existsSync(CONFIG_FILE)) {
     config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-    console.log('配置文件加载成功');
+    console.log('Config file loaded successfully.');
   } else {
     // 配置文件不存在，创建默认配置
-    config = { port: 8080, debug: false };
+    config = { port: 8080 };
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
-    console.log('配置文件不存在，已创建默认配置文件');
+    console.log('Config file not exists, default config created.');
   }
 } catch (err) {
-  console.error('配置文件加载失败，使用默认配置:', err.message);
-  config = { port: 8080, debug: false };
+  console.error('Config file load fail, using default config:', err.message);
+  config = { port: 8080 };
 }
 
 // 读取常量配置文件
@@ -37,6 +37,11 @@ const DATA_FILE = path.join(__dirname, 'mybookmark.json');
 const FAVICONS_DIR = path.join(__dirname, 'favicons');
 const DEFAULT_FAVICON = path.join(__dirname, 'website.png');
 const SETTING_FILE = path.join(__dirname, 'setting.ini');
+
+// 生成随机 ID（16位十六进制字符串）
+function generateRandomId() {
+  return Math.random().toString(16).substring(2, 18);
+}
 
 // 确保 favicons 目录存在
 if (!fs.existsSync(FAVICONS_DIR)) {
@@ -260,19 +265,11 @@ function readData() {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
     // 如果是旧格式（数组），转换为新格式
     if (Array.isArray(data)) {
-      return { title: '我的收藏夹', iconSize: 'medium', tabs: [{ id: 1, name: '我的常用站点', links: data }] };
-    }
-    // 确保有默认值
-    if (!data.iconSize) {
-      data.iconSize = 'medium';
+      return { title: '我的收藏夹', tabs: [{ id: "default", name: '我的常用站点', links: data }] };
     }
     // 如果没有tabs，创建默认的tab
     if (!data.tabs || !Array.isArray(data.tabs) || data.tabs.length === 0) {
-      data.tabs = [{ id: 1, name: '我的常用站点', links: data.links || [] }];
-    }
-    // 确保有currentTabId
-    if (!data.currentTabId && data.tabs.length > 0) {
-      data.currentTabId = data.tabs[0].id;
+      data.tabs = [{ id: "default", name: '我的常用站点', links: data.links || [] }];
     }
     return data;
   } catch {
@@ -280,9 +277,7 @@ function readData() {
     // 这里使用中文作为默认语言，前端会根据用户选择切换
     const defaultData = { 
       title: '我的收藏夹', 
-      iconSize: 'medium', 
-      currentTabId: 1,
-      tabs: [{ id: 1, name: '我的常用站点', links: [] }] 
+      tabs: [{ id: "default", name: '我的常用站点', links: [] }] 
     };
     // 立即写入默认数据到文件
     writeData(defaultData);
@@ -531,7 +526,7 @@ const server = http.createServer((req, res) => {
     debugLog(`Total tabs: ${data.tabs.length}`);
     
     // 在指定的 tab 中查找
-    const targetTab = data.tabs.find(t => t.id.toString() === tabId);
+    const targetTab = data.tabs.find(t => t.id === tabId);
     if (!targetTab) {
       debugLog(`Tab not found with ID: ${tabId}`);
       res.statusCode = 404;
@@ -541,7 +536,7 @@ const server = http.createServer((req, res) => {
     }
     
     debugLog(`Checking tab: ${targetTab.name}, links count: ${targetTab.links.length}`);
-    const link = targetTab.links.find(l => l.id.toString() === linkId);
+    const link = targetTab.links.find(l => l.id === linkId);
     
     if (!link) {
       debugLog(`Link not found with ID: ${linkId} in tab ${tabId}`);
@@ -652,14 +647,10 @@ const server = http.createServer((req, res) => {
   if (pathname === '/api/get' && req.method === 'GET') {
     res.setHeader('Content-Type', 'application/json;charset=utf-8');
     const data = readData();
-    // 返回当前tab的links
-    const currentTab = data.tabs.find(t => t.id === data.currentTabId);
+    // 返回所有tabs，前端根据localStorage中的currentTabId决定显示哪个
     const response = {
       title: data.title,
-      iconSize: data.iconSize,
-      tabs: data.tabs,
-      currentTabId: data.currentTabId,
-      links: currentTab ? currentTab.links : []
+      tabs: data.tabs
     };
     res.end(JSON.stringify(response));
     return;
@@ -674,17 +665,17 @@ const server = http.createServer((req, res) => {
       try {
         const item = JSON.parse(body);
         const data = readData();
-        // 添加到当前tab
-        const currentTab = data.tabs.find(t => t.id === data.currentTabId);
-        if (currentTab) {
+        // 添加到指定tab
+        const targetTab = data.tabs.find(t => t.id === item.tabId);
+        if (targetTab) {
           // 确保URL有协议
           const url = ensureUrlProtocol(item.url);
-          const newLink = { id: Date.now(), name: item.name, url: url };
+          const newLink = { id: generateRandomId(), name: item.name, url: url };
           // 如果有 note，也保存
           if (item.note) {
             newLink.note = item.note;
           }
-          currentTab.links.push(newLink);
+          targetTab.links.push(newLink);
         }
         writeData(data);
         res.end(JSON.stringify({ code: 0 }));
@@ -703,12 +694,12 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       try {
-        const { id } = JSON.parse(body);
+        const { id, tabId } = JSON.parse(body);
         const data = readData();
-        // 从当前tab中删除
-        const currentTab = data.tabs.find(t => t.id === data.currentTabId);
-        if (currentTab) {
-          currentTab.links = currentTab.links.filter(li => li.id !== id);
+        // 从指定tab中删除
+        const targetTab = data.tabs.find(t => t.id === tabId);
+        if (targetTab) {
+          targetTab.links = targetTab.links.filter(li => li.id !== id);
         }
         writeData(data);
         res.end(JSON.stringify({ code: 0 }));
@@ -727,23 +718,23 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       try {
-        const { id, name, url, note } = JSON.parse(body);
+        const { id, name, url, note, tabId } = JSON.parse(body);
         debugLog('Updating bookmark:', { id, name, url, note });
         const data = readData();
-        // 在当前tab中查找并更新
-        const currentTab = data.tabs.find(t => t.id === data.currentTabId);
-        if (currentTab) {
-          const index = currentTab.links.findIndex(li => li.id === id);
+        // 在指定tab中查找并更新
+        const targetTab = data.tabs.find(t => t.id === tabId);
+        if (targetTab) {
+          const index = targetTab.links.findIndex(li => li.id === id);
           debugLog('Found index:', index);
           if (index !== -1) {
-            const oldUrl = currentTab.links[index].url;
-            currentTab.links[index].name = name;
+            const oldUrl = targetTab.links[index].url;
+            targetTab.links[index].name = name;
             // 确保URL有协议
             const newUrl = ensureUrlProtocol(url);
-            currentTab.links[index].url = newUrl;
+            targetTab.links[index].url = newUrl;
             // 更新 note
             if (note !== undefined) {
-              currentTab.links[index].note = note;
+              targetTab.links[index].note = note;
             }
             debugLog('Updated data:', data);
             writeData(data);
@@ -827,20 +818,20 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       try {
-        const { linkIds } = JSON.parse(body);
+        const { linkIds, tabId } = JSON.parse(body);
         debugLog('Updating order:', linkIds);
         const data = readData();
-        // 根据ID数组重新排序当前tab的links
-        const currentTab = data.tabs.find(t => t.id === data.currentTabId);
-        if (currentTab) {
+        // 根据ID数组重新排序指定tab的links
+        const targetTab = data.tabs.find(t => t.id === tabId);
+        if (targetTab) {
           const newLinks = [];
           linkIds.forEach(id => {
-            const link = currentTab.links.find(l => l.id === id);
+            const link = targetTab.links.find(l => l.id === id);
             if (link) {
               newLinks.push(link);
             }
           });
-          currentTab.links = newLinks;
+          targetTab.links = newLinks;
           writeData(data);
           debugLog('Order updated successfully');
           res.end(JSON.stringify({ code: 0 }));
@@ -865,11 +856,8 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       try {
         const { iconSize } = JSON.parse(body);
-        debugLog('Updating icon size to:', iconSize);
-        const data = readData();
-        data.iconSize = iconSize;
-        writeData(data);
-        debugLog('Icon size updated successfully');
+        debugLog('Icon size updated to:', iconSize);
+        // iconSize 现在存储在 localStorage 中，不需要写入文件
         res.end(JSON.stringify({ code: 0 }));
       } catch (err) {
         console.error('Update icon size error:', err);
@@ -929,18 +917,7 @@ const server = http.createServer((req, res) => {
             currentData.title = importedData.title;
           }
           
-          // 更新图标大小（如果导入数据中有）
-          if (importedData.iconSize) {
-            currentData.iconSize = importedData.iconSize;
-          }
-          
-          // 确保currentTabId有效
-          if (importedData.currentTabId) {
-            const tabExists = currentData.tabs.find(t => t.id === importedData.currentTabId);
-            if (tabExists) {
-              currentData.currentTabId = importedData.currentTabId;
-            }
-          }
+          // iconSize 和 currentTabId 现在存储在 localStorage 中，不需要从导入数据中恢复
           
           writeData(currentData);
           debugLog('Data with tabs imported successfully');
@@ -950,9 +927,11 @@ const server = http.createServer((req, res) => {
         else if (importedData.links && Array.isArray(importedData.links)) {
           debugLog('Importing with legacy links-only format');
           
-          const currentTab = currentData.tabs.find(t => t.id === currentData.currentTabId);
+          // 注意：由于 currentTabId 现在在 localStorage 中，后端无法确定当前tab
+          // 前端应该在调用导入 API 时传递 tabId 参数
+          const targetTab = currentData.tabs[0]; // 默认添加到第一个tab
           
-          if (!currentTab) {
+          if (!targetTab) {
             res.statusCode = 404;
             res.end(JSON.stringify({ code: 1, message: 'Current tab not found' }));
             return;
@@ -976,8 +955,8 @@ const server = http.createServer((req, res) => {
           
           debugLog(`Importing ${newLinks.length} new links, skipping ${duplicateCount} duplicates`);
           
-          // 合并数据到当前tab
-          currentTab.links = [...currentTab.links, ...newLinks];
+          // 合并数据到目标tab
+          targetTab.links = [...targetTab.links, ...newLinks];
           if (importedData.title) {
             currentData.title = importedData.title;
           }
@@ -1006,8 +985,7 @@ const server = http.createServer((req, res) => {
         const data = readData();
         const tab = data.tabs.find(t => t.id === tabId);
         if (tab) {
-          data.currentTabId = tabId;
-          writeData(data);
+          // currentTabId 现在存储在 localStorage 中，不需要写入文件
           debugLog('Tab switched successfully');
           res.end(JSON.stringify({ code: 0 }));
         } else {
@@ -1034,12 +1012,12 @@ const server = http.createServer((req, res) => {
         debugLog('Adding tab:', name);
         const data = readData();
         const newTab = {
-          id: Date.now(),
+          id: generateRandomId(),
           name: name,
           links: []
         };
         data.tabs.push(newTab);
-        data.currentTabId = newTab.id; // 自动切换到新tab
+        // currentTabId 现在存储在 localStorage 中，不需要写入文件
         writeData(data);
         debugLog('Tab added successfully');
         res.end(JSON.stringify({ code: 0, tabId: newTab.id }));
@@ -1093,10 +1071,8 @@ const server = http.createServer((req, res) => {
         // 删除tab
         data.tabs.splice(tabIndex, 1);
         
-        // 如果删除的是当前tab，切换到第一个tab
-        if (data.currentTabId === tabId && data.tabs.length > 0) {
-          data.currentTabId = data.tabs[0].id;
-        }
+        // currentTabId 现在存储在 localStorage 中，不需要写入文件
+        // 如果删除的是当前tab，前端需要处理切换逻辑
         
         writeData(data);
         debugLog('Tab deleted successfully');
@@ -1369,19 +1345,32 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       try {
-        const { linkId } = JSON.parse(body);
-        debugLog(`Refresh favicon request for link ID: ${linkId}`);
+        const { linkId, tabId } = JSON.parse(body);
+        debugLog(`Refresh favicon request for link ID: ${linkId}, tabId: ${tabId}`);
         
         // 从数据文件中查找对应的 URL
         const data = readData();
         let websiteUrl = null;
         
-        // 在所有 tabs 中查找
-        for (const tab of data.tabs) {
-          const link = tab.links.find(l => l.id.toString() === linkId.toString());
-          if (link) {
-            websiteUrl = link.url;
-            break;
+        // 优先在指定 tab 中查找，如果没找到则在所有 tabs 中查找
+        if (tabId) {
+          const targetTab = data.tabs.find(t => t.id === tabId);
+          if (targetTab) {
+            const link = targetTab.links.find(l => l.id === linkId);
+            if (link) {
+              websiteUrl = link.url;
+            }
+          }
+        }
+        
+        // 如果在指定 tab 中没找到，在所有 tabs 中查找
+        if (!websiteUrl) {
+          for (const tab of data.tabs) {
+            const link = tab.links.find(l => l.id === linkId);
+            if (link) {
+              websiteUrl = link.url;
+              break;
+            }
           }
         }
         
@@ -1445,15 +1434,15 @@ server.listen(PORT, () => {
   }
   console.log('========================================');
   console.log('');
-  console.log(`服务已启动，访问：http://localhost:${PORT}`);
-  console.log(`数据文件：${DATA_FILE}`);
-  console.log(`配置文件：${CONFIG_FILE}`);
-  console.log(`系统设置：${SETTING_FILE}`);
-  console.log(`端口号：${config.port || 8080}`);
+  console.log(`Service started: http://localhost:${PORT}`);
+  console.log(`DataFile: ${DATA_FILE}`);
+  console.log(`ConfigFile: ${CONFIG_FILE}`);
+  console.log(`SettingFile: ${SETTING_FILE}`);
+  console.log(`Port: ${config.port || 8080}`);
   
   // 从 setting.ini 读取 debug 配置
   const systemConfig = readSystemConfig();
   const debugMode = systemConfig.debug === 'true';
-  console.log(`调试模式：${debugMode ? '开启' : '关闭'}`);
+  console.log(`DebugMode：${debugMode ? 'ENABLED' : 'DISABLED'}`);
   console.log('');
 });

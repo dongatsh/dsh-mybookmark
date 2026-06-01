@@ -208,6 +208,7 @@
                 deleteTabSuccess: '选项卡删除成功',
                 deleteTabFailed: '删除选项卡失败',
                 updateTabNameFailed: '更新选项卡名称失败',
+                bookmarkNotFound: '未找到收藏项',
                 moveFailed: '移动失败',
                 moveLinkError: '移动失败：',
                 noOtherTab: '没有其他Tab可以移动',
@@ -289,6 +290,7 @@
                 deleteTabSuccess: 'Tab deleted successfully',
                 deleteTabFailed: 'Failed to delete tab',
                 updateTabNameFailed: 'Failed to update tab name',
+                bookmarkNotFound: 'Bookmark not found',
                 moveFailed: 'Move failed',
                 moveLinkError: 'Move failed: ',
                 noOtherTab: 'No other tabs to move to',
@@ -433,20 +435,36 @@
         let currentEditId = null;
         let draggedElement = null;
         let draggedLinkId = null; // 保存被拖动的站点 ID
-        let currentIconSize = 'medium';
-        let currentTabId = null;
+        let currentIconSize = localStorage.getItem('iconSize') || 'medium';
+        let currentTabId = localStorage.getItem('currentTabId') || null;
         let draggedTabElement = null;
         let movingLinkId = null;
         let nextTabNumber = 2; // Tab 序号计数器
         let confirmCallback = null;
         let promptCallback = null;
 
+        // 生成随机 ID（16位十六进制字符串）
+        function generateRandomId() {
+            return Math.random().toString(16).substring(2, 18);
+        }
+
         // 读取列表
         async function loadLinks() {
             const res = await fetch('/api/get');
             const data = await res.json();
-            const list = data.links || [];
-            currentIconSize = data.iconSize || 'medium';
+            
+            // 从 localStorage 获取 currentTabId
+            const tabId = localStorage.getItem('currentTabId');
+            let list = [];
+            
+            if (tabId && data.tabs) {
+                const currentTab = data.tabs.find(t => t.id === tabId);
+                if (currentTab) {
+                    list = currentTab.links || [];
+                }
+            }
+            
+            // iconSize 已经从 localStorage 初始化，不需要从服务器获取
             
             // 更新按钮状态
             updateIconSizeButtons();
@@ -472,8 +490,8 @@
                          ondragend="handleDragEnd(event)"
                          ondragover="handleDragOver(event)"
                          ondrop="handleDrop(event)">
-                        <button class="move-btn-icon" onclick="showMoveToTabModal(${item.id})" title="${t('moveToOtherTab')}">⇄</button>
-                        <button class="refresh-favicon-btn" onclick="refreshFavicon(${item.id})" title="${t('refreshIcon')}">⟳</button>
+                        <button class="move-btn-icon" onclick="showMoveToTabModal('${item.id}')" title="${t('moveToOtherTab')}">⇄</button>
+                        <button class="refresh-favicon-btn" onclick="refreshFavicon('${item.id}')" title="${t('refreshIcon')}">⟳</button>
                         <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center;">
                             <img src="${favicon}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
                         </div>
@@ -484,8 +502,8 @@
                         </div>
                         <div class="card-actions">
                             <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')">${t('openButton')}</button>
-                            <button class="card-btn edit-btn" onclick="openEditModal(${item.id})">${t('editButton')}</button>
-                            <button class="card-btn del-btn" onclick="delLink(${item.id})">${t('deleteButton')}</button>
+                            <button class="card-btn edit-btn" onclick="openEditModal('${item.id}')">${t('editButton')}</button>
+                            <button class="card-btn del-btn" onclick="delLink('${item.id}')">${t('deleteButton')}</button>
                         </div>
                     </div>`;
                 } else {
@@ -496,8 +514,8 @@
                          ondragend="handleDragEnd(event)"
                          ondragover="handleDragOver(event)"
                          ondrop="handleDrop(event)">
-                        <button class="move-btn-icon" onclick="showMoveToTabModal(${item.id})" title="${t('moveToOtherTab')}">⇄</button>
-                        <button class="refresh-favicon-btn" onclick="refreshFavicon(${item.id})" title="${t('refreshIcon')}">⟳</button>
+                        <button class="move-btn-icon" onclick="showMoveToTabModal('${item.id}')" title="${t('moveToOtherTab')}">⇄</button>
+                        <button class="refresh-favicon-btn" onclick="refreshFavicon('${item.id}')" title="${t('refreshIcon')}">⟳</button>
                         <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center;">
                             <img src="${favicon}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
                         </div>
@@ -506,8 +524,8 @@
                         ${item.note ? `<div class="link-note">${item.note}</div>` : ''}
                         <div class="card-actions">
                             <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')">${t('openButton')}</button>
-                            <button class="card-btn edit-btn" onclick="openEditModal(${item.id})">${t('editButton')}</button>
-                            <button class="card-btn del-btn" onclick="delLink(${item.id})">${t('deleteButton')}</button>
+                            <button class="card-btn edit-btn" onclick="openEditModal('${item.id}')">${t('editButton')}</button>
+                            <button class="card-btn del-btn" onclick="delLink('${item.id}')">${t('deleteButton')}</button>
                         </div>
                     </div>`;
                 }
@@ -536,7 +554,7 @@
         async function loadTabs() {
             const res = await fetch('/api/get');
             const data = await res.json();
-            let tabs = data.tabs || [{ id: Date.now(), name: '我的常用站点', links: [] }];
+            let tabs = data.tabs || [{ id: generateRandomId(), name: '我的常用站点', links: [] }];
             
             // 根据当前语言转换默认 tab 名称
             tabs = tabs.map(tab => {
@@ -548,14 +566,10 @@
                 return tab;
             });
             
-            // 如果没有当前选中的 tab，选中第一个
+            // 如果没有当前选中的 tab，选中第一个并保存到 localStorage
             if (!currentTabId && tabs.length > 0) {
                 currentTabId = tabs[0].id;
-            }
-            
-            // 从服务器获取当前tabId
-            if (data.currentTabId) {
-                currentTabId = data.currentTabId;
+                localStorage.setItem('currentTabId', currentTabId);
             }
             
             // 计算下一个 Tab 序号
@@ -596,7 +610,7 @@
             tabs.forEach((tab, index) => {
                 const activeClass = tab.id === currentTabId ? 'active' : '';
                 const activeIcon = tab.id === currentTabId ? '<span class="tab-active-icon">●</span>' : '';
-                const closeBtn = tabs.length > 1 ? `<span class="tab-close" onclick="deleteTab(${tab.id}, event)">×</span>` : '';
+                const closeBtn = tabs.length > 1 ? `<span class="tab-close" onclick="deleteTab('${tab.id}', event)">×</span>` : '';
                 html += `
                     <div class="tab-item ${activeClass}" draggable="true" data-tab-id="${tab.id}"
                          ondragstart="handleTabDragStart(event)"
@@ -695,7 +709,7 @@
             const span = document.createElement('span');
             span.className = 'tab-name';
             span.textContent = name;
-            span.setAttribute('ondblclick', `startEditTabName(${tabId}, this)`);
+            span.setAttribute('ondblclick', `startEditTabName('${tabId}', this)`);
             return span;
         }
 
@@ -717,6 +731,7 @@
         // 切换 Tab
         async function switchTab(tabId) {
             currentTabId = tabId;
+            localStorage.setItem('currentTabId', tabId);
             await fetch('/api/switchTab', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -754,6 +769,10 @@
                     const result = await response.json();
                     
                     if (result.code === 0) {
+                        // 自动切换到新tab并保存到 localStorage
+                        currentTabId = result.tabId;
+                        localStorage.setItem('currentTabId', result.tabId);
+                        
                         // 如果使用的是默认名称，增加序号
                         const zhDefaultName = `选项卡#${nextTabNumber}`;
                         const enDefaultName = `Tab #${nextTabNumber}`;
@@ -801,6 +820,15 @@
                     const result = await res.json();
                     
                     if (result.code === 0) {
+                        // 如果删除的是当前tab，切换到第一个tab
+                        const res = await fetch('/api/get');
+                        const data = await res.json();
+                        
+                        if (currentTabId === tabId && data.tabs && data.tabs.length > 0) {
+                            currentTabId = data.tabs[0].id;
+                            localStorage.setItem('currentTabId', currentTabId);
+                        }
+                        
                         loadTabs();
                         loadLinks();
                         showToast(t('deleteTabSuccess'), 'success');
@@ -881,7 +909,7 @@
                 return;
             }
             
-            const targetTabId = parseInt(targetTab.dataset.tabId);
+            const targetTabId = targetTab.dataset.tabId; // Tab ID 可能是字符串或数字
             
             // 如果拖动的是站点卡片
             if (draggedLinkId) {
@@ -943,7 +971,7 @@
 
             // 获取新的顺序并保存到服务器
             const newOrderTabs = Array.from(header.querySelectorAll('.tab-item'));
-            const tabIds = newOrderTabs.map(tab => parseInt(tab.dataset.tabId));
+            const tabIds = newOrderTabs.map(tab => tab.dataset.tabId); // Tab ID 可能是字符串或数字
             
             try {
                 await fetch('/api/updateTabOrder', {
@@ -968,7 +996,7 @@
             }
             await fetch('/api/add', {
                 method: 'POST',
-                body: JSON.stringify({ name, url })
+                body: JSON.stringify({ name, url, tabId: currentTabId })
             });
             document.getElementById('linkName').value = '';
             document.getElementById('linkUrl').value = '';
@@ -1043,7 +1071,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ name, url, note })
+                    body: JSON.stringify({ name, url, note, tabId: currentTabId })
                 });
                 closeAddModal();
                 loadLinks();
@@ -1060,7 +1088,7 @@
                 if (!confirmed) return;
                 await fetch('/api/del', {
                     method: 'POST',
-                    body: JSON.stringify({ id })
+                    body: JSON.stringify({ id, tabId: currentTabId })
                 });
                 loadLinks();
                 showToast(t('deleteSuccess'), 'success');
@@ -1106,13 +1134,23 @@
             currentEditId = id;
             const res = await fetch('/api/get');
             const data = await res.json();
-            const list = data.links || [];
-            const item = list.find(i => i.id === id);
+            
+            // 从 tabs 中查找当前 Tab 的 links
+            let item = null;
+            if (currentTabId && data.tabs) {
+                const currentTab = data.tabs.find(t => t.id === currentTabId);
+                if (currentTab) {
+                    item = currentTab.links.find(i => i.id === id);
+                }
+            }
+            
             if (item) {
                 document.getElementById('editName').value = item.name;
                 document.getElementById('editUrl').value = item.url;
                 document.getElementById('editNote').value = item.note || '';
                 document.getElementById('editModal').style.display = 'flex';
+            } else {
+                showToast(t('bookmarkNotFound'), 'error');
             }
         }
 
@@ -1141,7 +1179,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ id: currentEditId, name, url, note })
+                    body: JSON.stringify({ id: currentEditId, name, url, note, tabId: currentTabId })
                 });
                 const result = await response.json();
                 console.log('Update result:', result);
@@ -1251,7 +1289,7 @@
         function handleDragStart(event) {
             draggedElement = event.target.closest('.link-card');
             if (draggedElement) {
-                draggedLinkId = parseInt(draggedElement.dataset.id);
+                draggedLinkId = draggedElement.dataset.id; // ID 现在是字符串，不需要 parseInt
                 draggedElement.classList.add('dragging');
                 event.dataTransfer.effectAllowed = 'move';
                 event.dataTransfer.setData('text/html', draggedElement.innerHTML);
@@ -1308,7 +1346,7 @@
 
             // 获取新的顺序并保存到服务器
             const newOrderCards = Array.from(grid.querySelectorAll('.link-card'));
-            const linkIds = newOrderCards.map(card => parseInt(card.dataset.id));
+            const linkIds = newOrderCards.map(card => card.dataset.id); // ID 现在是字符串
             
             try {
                 await fetch('/api/updateOrder', {
@@ -1316,7 +1354,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ linkIds })
+                    body: JSON.stringify({ linkIds, tabId: currentTabId })
                 });
                 console.log('Order saved to server');
             } catch (error) {
@@ -1329,6 +1367,7 @@
         // 设置图标大小
         async function setIconSize(size) {
             currentIconSize = size;
+            localStorage.setItem('iconSize', size);
             
             try {
                 await fetch('/api/updateIconSize', {
@@ -1420,7 +1459,7 @@
                     filename = `mybookmark_full_backup_${new Date().getTime()}.json`;
                 } else {
                     // 导出单个选项卡
-                    const tabId = parseInt(scope);
+                    const tabId = scope; // Tab ID 可能是字符串或数字
                     const selectedTab = data.tabs.find(t => t.id === tabId);
                     
                     if (!selectedTab) {
@@ -1576,7 +1615,7 @@
 
         // 确认移动到Tab
         async function confirmMoveToTab() {
-            const targetTabId = parseInt(document.getElementById('targetTabSelect').value);
+            const targetTabId = document.getElementById('targetTabSelect').value; // Tab ID 可能是字符串或数字
             if (!targetTabId || !movingLinkId) return;
             
             try {
@@ -1702,7 +1741,7 @@
                 const response = await fetch('/api/refreshFavicon', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ linkId: linkId })
+                    body: JSON.stringify({ linkId: linkId, tabId: currentTabId })
                 });
                 
                 const result = await response.json();
