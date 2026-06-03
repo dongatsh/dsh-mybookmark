@@ -59,12 +59,12 @@
     <div class="modal-overlay" id="editModal">
         <div class="modal">
             <h3 data-i18n="editBookmark">编辑收藏</h3>
-            <input type="text" class="modal-input" id="editName" placeholder="网址名称（可为空）" data-i18n-placeholder="bookmarkNamePlaceholder">
+            <input type="text" class="modal-input" id="editName" placeholder="网址名称（可为空，将自动从网站获取）" data-i18n-placeholder="bookmarkNamePlaceholder">
             <input type="url" class="modal-input" id="editUrl" placeholder="完整网址 https://" data-i18n-placeholder="fullUrlPlaceholder">
-            <input type="text" class="modal-input" id="editNote" placeholder="说明" data-i18n-placeholder="notePlaceholder" style="margin-bottom: 0;">
+            <input type="text" class="modal-input" id="editNote" placeholder="说明" data-i18n-placeholder="notePlaceholder" style="margin-bottom: 20px;">
             <div class="modal-buttons">
                 <button class="cancel-btn" onclick="closeEditModal()" data-i18n="cancel">取消</button>
-                <button class="save-btn" onclick="saveEdit()" data-i18n="save">保存</button>
+                <button class="save-btn" id="editBtn" onclick="saveEdit()" data-i18n="save">保存</button>
             </div>
         </div>
     </div>
@@ -73,12 +73,12 @@
     <div class="modal-overlay" id="addModal">
         <div class="modal">
             <h3 data-i18n="addBookmark">添加收藏</h3>
-            <input type="text" class="modal-input" id="addName" placeholder="网址名称（可为空，将自动提取）" data-i18n-placeholder="bookmarkNameAutoPlaceholder">
-            <input type="url" class="modal-input" id="addUrl" placeholder="完整网址 https://" oninput="autoFillName()" data-i18n-placeholder="fullUrlPlaceholder">
-            <input type="text" class="modal-input" id="addNote" placeholder="说明" data-i18n-placeholder="notePlaceholder" style="margin-bottom: 0;">
+            <input type="text" class="modal-input" id="addName" placeholder="网址名称（可为空，将自动从网站获取）" data-i18n-placeholder="bookmarkNameAutoPlaceholder">
+            <input type="url" class="modal-input" id="addUrl" placeholder="完整网址 https://" data-i18n-placeholder="fullUrlPlaceholder">
+            <input type="text" class="modal-input" id="addNote" placeholder="说明" data-i18n-placeholder="notePlaceholder" style="margin-bottom: 20px;">
             <div class="modal-buttons">
                 <button class="cancel-btn" onclick="closeAddModal()" data-i18n="cancel">取消</button>
-                <button class="save-btn" onclick="saveAddLink()" data-i18n="add">添加</button>
+                <button class="save-btn" id="addBtn" onclick="saveAddLink()" data-i18n="add">添加</button>
             </div>
         </div>
     </div>
@@ -228,8 +228,8 @@
                 clickToSelectFile: '📁 点击选择文件',
                 noBookmarks: '暂无收藏，添加你的第一个网址',
                 editBookmark: '编辑收藏',
-                bookmarkNamePlaceholder: '网址名称（可为空）',
-                bookmarkNameAutoPlaceholder: '网址名称（可为空，将自动提取）',
+                bookmarkNamePlaceholder: '网址名称（可为空，将自动从网站获取）',
+                bookmarkNameAutoPlaceholder: '网址名称（可为空，将自动从网站获取）',
                 fullUrlPlaceholder: '完整网址 https://',
                 notePlaceholder: '说明',
                 cancel: '取消',
@@ -317,8 +317,8 @@
                 clickToSelectFile: '📁 Click to Select File',
                 noBookmarks: 'No bookmarks yet, add your first one',
                 editBookmark: 'Edit Bookmark',
-                bookmarkNamePlaceholder: 'Website name (optional)',
-                bookmarkNameAutoPlaceholder: 'Website name (optional, auto-extracted)',
+                bookmarkNamePlaceholder: 'Website name (optional, auto-fetched from website)',
+                bookmarkNameAutoPlaceholder: 'Website name (optional, auto-fetched from website)',
                 fullUrlPlaceholder: 'Full URL https://',
                 notePlaceholder: 'Note',
                 cancel: 'Cancel',
@@ -1152,30 +1152,41 @@
             // 确保URL有协议
             url = ensureUrlProtocol(url);
             
-            // 如果名称为空，自动从 URL 提取
-            if (!name) {
-                name = extractNameFromUrl(url);
-            }
+            // 如果名称为空，不提取，让后端自动获取
+            // 后端会从网站标题中提取，如果失败则使用域名
             
-            if (!name) {
-                showToast(t('cannotExtractName'), 'warning');
-                return;
-            }
+            // 设置 loading 状态
+            const addBtn = document.getElementById('addBtn');
+            const originalText = addBtn.textContent;
+            addBtn.classList.add('loading');
+            addBtn.disabled = true;
             
             try {
-                await fetch('/api/add', {
+                const response = await fetch('/api/add', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ name, url, note, tabId: currentTabId })
                 });
+                const result = await response.json();
+                
                 closeAddModal();
                 loadLinks();
-                showToast(t('addSuccess'), 'success');
+                
+                // 显示使用的名称
+                if (result.name && result.name !== name) {
+                    showToast(`${t('addSuccess')} - ${result.name}`, 'success');
+                } else {
+                    showToast(t('addSuccess'), 'success');
+                }
             } catch (error) {
                 console.error('Add link error:', error);
                 showToast(t('addFailed') + error.message, 'error');
+            } finally {
+                // 移除 loading 状态
+                addBtn.classList.remove('loading');
+                addBtn.disabled = false;
             }
         }
 
@@ -1259,16 +1270,25 @@
 
         // 保存编辑
         async function saveEdit() {
-            const name = document.getElementById('editName').value.trim();
+            let name = document.getElementById('editName').value.trim();
             let url = document.getElementById('editUrl').value.trim();
             const note = document.getElementById('editNote').value.trim();
-            if (!name || !url) {
-                showToast(t('fillNameAndUrl'), 'warning');
+            
+            if (!url) {
+                showToast(t('fillUrl'), 'warning');
                 return;
             }
             
             // 确保URL有协议
             url = ensureUrlProtocol(url);
+            
+            // 如果名称为空，不提取，让后端自动获取
+            // 后端会从网站标题中提取，如果失败则使用域名
+            
+            // 设置 loading 状态
+            const editBtn = document.getElementById('editBtn');
+            editBtn.classList.add('loading');
+            editBtn.disabled = true;
             
             try {
                 const response = await fetch('/api/update', {
@@ -1283,13 +1303,23 @@
                 if (result.code === 0) {
                     closeEditModal();
                     loadLinks();
-                    showToast(t('saveSuccess'), 'success');
+                    
+                    // 显示使用的名称
+                    if (result.name && result.name !== name) {
+                        showToast(`${t('saveSuccess')} - ${result.name}`, 'success');
+                    } else {
+                        showToast(t('saveSuccess'), 'success');
+                    }
                 } else {
                     showToast(t('saveFailed') + (result.message || t('unknownError')), 'error');
                 }
             } catch (error) {
                 console.error('Save error:', error);
                 showToast(t('saveError') + error.message, 'error');
+            } finally {
+                // 移除 loading 状态
+                editBtn.classList.remove('loading');
+                editBtn.disabled = false;
             }
         }
 

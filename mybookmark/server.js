@@ -341,6 +341,235 @@ function extractDomain(urlStr) {
   }
 }
 
+/**
+ * 从域名中提取有意义的名称
+ * @param {string} domain 完整域名
+ * @returns {string} 提取后的名称
+ */
+function extractMeaningfulName(domain) {
+  if (!domain) return 'New Bookmark';
+  
+  // 去除 www. 前缀
+  let name = domain.replace(/^www\./, '');
+  
+  // 如果包含多个点，尝试提取主要部分
+  const parts = name.split('.');
+  
+  if (parts.length >= 2) {
+    // 定义常见的顶级域名和二级域名组合
+    const compoundTlds = ['com.cn', 'org.cn', 'net.cn', 'gov.cn', 'edu.cn', 
+                          'co.uk', 'co.jp', 'com.au', 'com.br', 'com.mx'];
+    const simpleTlds = ['com', 'org', 'net', 'edu', 'gov', 'io', 'co', 'cn', 
+                        'jp', 'uk', 'de', 'fr', 'it', 'es', 'ru', 'br', 'au', 
+                        'me', 'tv', 'cc', 'xyz', 'top', 'info', 'biz'];
+    
+    // 检查是否是复合顶级域名（如 .com.cn）
+    const lastTwoParts = parts.slice(-2).join('.').toLowerCase();
+    const lastPart = parts[parts.length - 1].toLowerCase();
+    
+    if (compoundTlds.includes(lastTwoParts)) {
+      // 复合顶级域名：example.com.cn → example
+      // 如果有子域名：zb.example.com.cn → example
+      if (parts.length >= 3) {
+        name = parts[parts.length - 3];
+      } else {
+        name = parts[0];
+      }
+    } else if (simpleTlds.includes(lastPart)) {
+      // 简单顶级域名：example.com → example
+      // 如果有子域名：zb.example.com → example
+      if (parts.length >= 3) {
+        // 有多个子域名时，取倒数第二部分（主域名）
+        name = parts[parts.length - 2];
+      } else {
+        // 只有两部分，取第一部分
+        name = parts[0];
+      }
+    } else {
+      // 其他情况（如 .local, .dev 等），取第一部分或主要部分
+      if (parts.length >= 3) {
+        // 对于多段域名，取中间部分作为主要名称
+        // 例如：zb.betatime.local → betatime
+        name = parts[parts.length - 2];
+      } else {
+        name = parts[0];
+      }
+    }
+  }
+  
+  // 首字母大写
+  if (name.length > 0) {
+    name = name.charAt(0).toUpperCase() + name.slice(1);
+  }
+  
+  return name || 'New Bookmark';
+}
+
+/**
+ * 清理标题，提取分隔符之前的内容
+ * @param {string} title 原始标题
+ * @returns {string} 清理后的标题
+ */
+function cleanTitle(title) {
+  if (!title || title.trim() === '') return '';
+  
+  // 定义常见的分隔符（按优先级排序）
+  const separators = [
+    '(',     // 英文左括号（优先处理）
+    '（',     // 中文左括号（优先处理）
+    '-',   // 英文破折号
+    '–',   // En dash
+    '—',   // Em dash
+    ':',    // 英文冒号
+    '：',    // 中文冒号
+    '|',     // 竖线
+    '·',     // 中间点
+  ];
+  
+  let cleanedTitle = title.trim();
+  
+  // 尝试每个分隔符，取第一个匹配的部分
+  for (const separator of separators) {
+    const index = cleanedTitle.indexOf(separator);
+    if (index !== -1) {
+      // 提取分隔符之前的内容
+      cleanedTitle = cleanedTitle.substring(0, index).trim();
+      logInfo(`🔧 Split by "${separator}" at position ${index}`);
+      break;
+    }
+  }
+  
+  // 如果提取后为空，返回原标题
+  const result = cleanedTitle || title.trim();
+  logInfo(`📝 Title after cleaning: "${result}"`);
+  return result;
+}
+
+/**
+ * 从网站获取标题和 favicon
+ * @param {string} siteUrl 目标网址
+ * @returns {Promise<{title: string, favicon: string}>}
+ */
+function getMetaFromWebsite(siteUrl) {
+  return new Promise((resolve, reject) => {
+    try {
+      logInfo(`🌐 Fetching meta from: ${siteUrl}`);
+      const urlObj = new URL(siteUrl);
+      const opt = {
+        hostname: urlObj.hostname,
+        port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+        path: urlObj.pathname + urlObj.search,
+        protocol: urlObj.protocol,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        },
+        timeout: 10000 // 10秒超时
+      };
+
+      // https需要引入https模块，这里兼容处理
+      const reqLib = urlObj.protocol === 'https:' ? https : http;
+
+      let html = '';
+      const req = reqLib.get(opt, (res) => {
+        logInfo(`📡 Response status: ${res.statusCode} for ${siteUrl}`);
+        
+        // 处理重定向
+        if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307) {
+          const redirectUrl = res.headers.location;
+          if (redirectUrl) {
+            logInfo(`↩️ Redirecting to: ${redirectUrl}`);
+            res.resume(); // 消耗当前响应
+            // 递归调用，尝试重定向后的 URL
+            getMetaFromWebsite(redirectUrl).then(resolve).catch(reject);
+            return;
+          }
+        }
+
+        if (res.statusCode !== 200) {
+          logInfo(`⚠️ Failed to fetch ${siteUrl}, status: ${res.statusCode}`);
+          resolve({ title: '', favicon: '' });
+          return;
+        }
+
+        // 处理编码
+        res.setEncoding('utf8');
+        res.on('data', chunk => html += chunk);
+        res.on('end', () => {
+          try {
+            logInfo(`📄 Received ${html.length} bytes from ${siteUrl}`);
+            
+            // 1.匹配标题 <title>内容</title>
+            let title = '';
+            const titleReg = /<title[^>]*>([\s\S]*?)<\/title>/i;
+            const titleMatch = html.match(titleReg);
+            if (titleMatch && titleMatch[1]) {
+              title = titleMatch[1].trim();
+              // 去除多余的空白字符
+              title = title.replace(/\s+/g, ' ');
+              logInfo(`📝 Found original title: "${title}"`);
+              
+              // 清理标题，提取分隔符之前的内容
+              title = cleanTitle(title);
+              logInfo(`✨ Cleaned title: "${title}"`);
+            } else {
+              logInfo(`⚠️ No title tag found`);
+            }
+
+            // 2.匹配 favicon link
+            let faviconHref = '';
+            // 匹配 rel="icon|shortcut icon" 的link标签href
+            const iconReg = /<link[^>]+?rel=(["'])(?:shortcut\s+icon|icon)\1[^>]+?href=(["'])(.*?)\2/gi;
+            let match;
+            while ((match = iconReg.exec(html)) !== null) {
+              faviconHref = match[3];
+              logInfo(`🖼️ Found favicon link: ${faviconHref}`);
+              break; // 取第一个图标
+            }
+
+            // 相对路径转绝对地址
+            let favicon = '';
+            if (faviconHref) {
+              try {
+                favicon = new URL(faviconHref, urlObj.origin).href;
+                logInfo(`✅ Favicon URL: ${favicon}`);
+              } catch (e) {
+                logInfo(`❌ Invalid favicon URL: ${faviconHref}`);
+              }
+            } else {
+              // 默认根目录 favicon.ico
+              favicon = new URL('/favicon.ico', urlObj.origin).href;
+              logInfo(`⚠️ No favicon link found, using default: ${favicon}`);
+            }
+
+            logInfo(`✨ Extracted meta for ${siteUrl}: title="${title}", favicon="${favicon}"`);
+            resolve({ title, favicon });
+          } catch (err) {
+            logError(`❌ Error parsing HTML for ${siteUrl}:`, err.message);
+            resolve({ title: '', favicon: '' });
+          }
+        });
+      });
+
+      req.on('error', err => {
+        logError(`❌ Error fetching ${siteUrl}:`, err.message);
+        resolve({ title: '', favicon: '' }); // 失败时返回空值，不阻断添加流程
+      });
+
+      req.on('timeout', () => {
+        logInfo(`⏱️ Timeout fetching ${siteUrl}`);
+        req.destroy();
+        resolve({ title: '', favicon: '' });
+      });
+
+      req.end();
+    } catch (err) {
+      logError(`❌ Error in getMetaFromWebsite:`, err.message);
+      resolve({ title: '', favicon: '' });
+    }
+  });
+}
+
 // 获取 favicon 文件路径
 function getFaviconPath(domain) {
   return path.join(FAVICONS_DIR, `${domain}.png`);
@@ -697,7 +926,7 @@ const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json;charset=utf-8');
     let body = '';
     req.on('data', chunk => body += chunk);
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const item = JSON.parse(body);
         const data = readData();
@@ -706,18 +935,78 @@ const server = http.createServer((req, res) => {
         if (targetTab) {
           // 确保URL有协议
           const url = ensureUrlProtocol(item.url);
-          const newLink = { id: generateRandomId(), name: item.name, url: url };
+          
+          // 尝试从网站获取标题和 favicon
+          let name = item.name;
+          let shouldDownloadFavicon = true;
+          
+          // 如果用户没有提供名称，或者名称为空，则尝试从网站获取
+          if (!name || name.trim() === '') {
+            logInfo(`🔍 No name provided, fetching from website: ${url}`);
+            let fetchedTitle = null; // 标记是否成功获取到标题
+            
+            try {
+              const meta = await getMetaFromWebsite(url);
+              if (meta.title && meta.title.trim() !== '') {
+                // 只有当标题不为空且不是纯空白时才使用
+                name = meta.title.trim();
+                fetchedTitle = true;
+                logInfo(`✅ Using fetched title: ${name}`);
+              } else {
+                logInfo(`⚠️ Website returned empty title`);
+              }
+              
+              // 如果获取到了 favicon URL，尝试下载
+              if (meta.favicon) {
+                logInfo(`📸 Found favicon URL: ${meta.favicon}`);
+                // 注意：这里的 favicon 是完整 URL，我们需要下载它
+                // 但由于 downloadFavicon 只支持从域名下载 favicon.ico，我们仍然使用原有逻辑
+              }
+            } catch (err) {
+              logError(`❌ Failed to fetch meta from ${url}:`, err.message);
+              // 网络错误等情况，标记为未获取到标题
+            }
+            
+            // 只有在无法获取标题时，才使用域名作为默认值
+            if (!fetchedTitle) {
+              const domain = extractDomain(url);
+              name = domain ? extractMeaningfulName(domain) : 'New Bookmark';
+              logInfo(`⚠️ Using default name: ${name}`);
+            }
+          } else {
+            logInfo(`✏️ Using provided name: ${name}`);
+          }
+          
+          const newLink = { id: generateRandomId(), name: name, url: url };
           // 如果有 note，也保存
           if (item.note) {
             newLink.note = item.note;
           }
           targetTab.links.push(newLink);
+          writeData(data);
+          
+          // 异步下载 favicon（不阻塞响应）
+          const domain = extractDomain(url);
+          if (domain && shouldDownloadFavicon) {
+            logInfo(`🌐 Triggering favicon download for ${domain}`);
+            downloadFavicon(domain, (err, savedPath) => {
+              if (fs.existsSync(savedPath)) {
+                logInfo(`✅ Favicon ready for ${domain}: ${savedPath}`);
+              } else {
+                logInfo(`❌ Favicon download failed for ${domain}`);
+              }
+            });
+          }
+          
+          res.end(JSON.stringify({ code: 0, name: name }));
+        } else {
+          res.statusCode = 404;
+          res.end(JSON.stringify({ code: 1, message: 'Tab not found' }));
         }
-        writeData(data);
-        res.end(JSON.stringify({ code: 0 }));
       } catch (err) {
+        logError('Add bookmark error:', err);
         res.statusCode = 500;
-        res.end(JSON.stringify({ code: 1, message: 'Parse error' }));
+        res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
     });
     return;
@@ -752,34 +1041,66 @@ const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json;charset=utf-8');
     let body = '';
     req.on('data', chunk => body += chunk);
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const { id, name, url, note, tabId } = JSON.parse(body);
-        debugLog('Updating bookmark:', { id, name, url, note });
+        logInfo('Updating bookmark:', { id, name, url, note });
         const data = readData();
         // 在指定tab中查找并更新
         const targetTab = data.tabs.find(t => t.id === tabId);
         if (targetTab) {
           const index = targetTab.links.findIndex(li => li.id === id);
-          debugLog('Found index:', index);
+          logInfo('Found index:', index);
           if (index !== -1) {
             const oldUrl = targetTab.links[index].url;
-            targetTab.links[index].name = name;
+            const oldName = targetTab.links[index].name;
+            
             // 确保URL有协议
             const newUrl = ensureUrlProtocol(url);
+            
+            // 处理名称：如果名称为空，尝试从网站获取
+            let finalName = name;
+            if (!finalName || finalName.trim() === '') {
+              logInfo(`🔍 No name provided in edit, fetching from website: ${newUrl}`);
+              let fetchedTitle = null;
+              
+              try {
+                const meta = await getMetaFromWebsite(newUrl);
+                if (meta.title && meta.title.trim() !== '') {
+                  finalName = meta.title.trim();
+                  fetchedTitle = true;
+                  logInfo(`✅ Using fetched title: ${finalName}`);
+                } else {
+                  logInfo(`⚠️ Website returned empty title`);
+                }
+              } catch (err) {
+                logError(`❌ Failed to fetch meta from ${newUrl}:`, err.message);
+              }
+              
+              // 只有在无法获取标题时，才使用域名作为默认值
+              if (!fetchedTitle) {
+                const domain = extractDomain(newUrl);
+                finalName = domain ? extractMeaningfulName(domain) : oldName || 'New Bookmark';
+                logInfo(`⚠️ Using default name: ${finalName}`);
+              }
+            } else {
+              logInfo(`✏️ Using provided name: ${finalName}`);
+            }
+            
+            targetTab.links[index].name = finalName;
             targetTab.links[index].url = newUrl;
             // 更新 note
             if (note !== undefined) {
               targetTab.links[index].note = note;
             }
-            debugLog('Updated data:', data);
+            logInfo('Updated data:', data);
             writeData(data);
-            debugLog('Data written successfully');
+            logInfo('Data written successfully');
             
             // 始终触发 favicon 下载/刷新
             const domain = extractDomain(newUrl);
             if (domain) {
-              debugLog(`Triggering favicon download for ${domain}`);
+              logInfo(`🌐 Triggering favicon download for ${domain}`);
               // 如果 URL 发生变化，删除旧的 favicon 缓存
               if (oldUrl !== newUrl) {
                 const oldDomain = extractDomain(oldUrl);
@@ -788,7 +1109,7 @@ const server = http.createServer((req, res) => {
                   if (fs.existsSync(oldFaviconPath)) {
                     try {
                       fs.unlinkSync(oldFaviconPath);
-                      debugLog(`Deleted old favicon: ${oldFaviconPath}`);
+                      logInfo(`🗑️ Deleted old favicon: ${oldFaviconPath}`);
                     } catch (err) {
                       logError(`Failed to delete old favicon: ${err.message}`);
                     }
@@ -798,16 +1119,16 @@ const server = http.createServer((req, res) => {
               // 触发 favicon 下载（会检查缓存，如果已存在则直接使用）
               downloadFavicon(domain, (err, savedPath) => {
                 if (fs.existsSync(savedPath)) {
-                  debugLog(`Favicon ready for ${domain}: ${savedPath}`);
+                  logInfo(`✅ Favicon ready for ${domain}: ${savedPath}`);
                 } else {
-                  debugLog(`Favicon download failed for ${domain}`);
+                  logInfo(`❌ Favicon download failed for ${domain}`);
                 }
               });
             }
             
-            res.end(JSON.stringify({ code: 0 }));
+            res.end(JSON.stringify({ code: 0, name: finalName }));
           } else {
-            debugLog('Bookmark not found with id:', id);
+            logInfo('Bookmark not found with id:', id);
             res.statusCode = 404;
             res.end(JSON.stringify({ code: 1, message: 'Not found' }));
           }
