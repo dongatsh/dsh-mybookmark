@@ -10,15 +10,15 @@ let config;
 try {
   if (fs.existsSync(CONFIG_FILE)) {
     config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-    console.log('Config file loaded successfully.');
+    logInfo('Config file loaded successfully.');
   } else {
     // 配置文件不存在，创建默认配置
     config = { port: 8080 };
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
-    console.log('Config file not exists, default config created.');
+    logInfo('Config file not exists, default config created.');
   }
 } catch (err) {
-  console.error('Config file load fail, using default config:', err.message);
+  logError('Config file load fail, using default config:', err.message);
   config = { port: 8080 };
 }
 
@@ -28,7 +28,7 @@ let constants;
 try {
   constants = JSON.parse(fs.readFileSync(CONSTANT_FILE, 'utf8'));
 } catch (err) {
-  console.warn('常量配置文件加载失败，使用默认值');
+  logWarn('常量配置文件加载失败，使用默认值');
   constants = { version: '1.0.0', copyright: '(c) DSH - MyBookmark' };
 }
 
@@ -86,7 +86,7 @@ function readFaviconFailures() {
     
     return failures;
   } catch (err) {
-    console.error('Failed to read setting.ini:', err.message);
+    logError('Failed to read setting.ini:', err.message);
     return {};
   }
 }
@@ -141,7 +141,7 @@ function writeFaviconFailure(domain, date) {
     fs.writeFileSync(SETTING_FILE, newLines.join('\n'), 'utf8');
     debugLog(`Recorded favicon failure for ${domain} on ${date}`);
   } catch (err) {
-    console.error('Failed to write setting.ini:', err.message);
+    logError('Failed to write setting.ini:', err.message);
   }
 }
 
@@ -187,7 +187,7 @@ function readSystemConfig() {
     
     return config;
   } catch (err) {
-    console.error('Failed to read system config from setting.ini:', err.message);
+    logError('Failed to read system config from setting.ini:', err.message);
     return { debug: 'false' };
   }
 }
@@ -242,8 +242,36 @@ function writeSystemConfig(key, value) {
     fs.writeFileSync(SETTING_FILE, newLines.join('\n'), 'utf8');
     debugLog(`Updated system config: ${key}=${value}`);
   } catch (err) {
-    console.error('Failed to write system config to setting.ini:', err.message);
+    logError('Failed to write system config to setting.ini:', err.message);
   }
+}
+
+// 格式化时间戳 [yyyy-MM-dd HH:mm:ss]
+function formatTimestamp() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  return `[${year}-${month}-${day} ${hours}:${minutes}:${seconds}]`;
+}
+
+// 统一日志函数 - 带时间戳
+function logInfo(...args) {
+  const timestamp = formatTimestamp();
+  console.log(timestamp, ...args);
+}
+
+function logError(...args) {
+  const timestamp = formatTimestamp();
+  console.error(timestamp, ...args);
+}
+
+function logWarn(...args) {
+  const timestamp = formatTimestamp();
+  console.warn(timestamp, ...args);
 }
 
 // 调试日志函数 - 每次调用时动态读取配置
@@ -252,7 +280,8 @@ function debugLog(...args) {
     const systemConfig = readSystemConfig();
     const debugMode = systemConfig.debug === 'true';
     if (debugMode) {
-      console.log(...args);
+      const timestamp = formatTimestamp();
+      console.log(timestamp, ...args);
     }
   } catch (err) {
     // 如果读取失败，不输出日志
@@ -398,7 +427,7 @@ function downloadFavicon(domain, callback) {
                   callback(null, faviconPath);
                 });
                 stream.on('error', err => {
-                  console.error(`Error saving favicon: ${currentUrl}: ${err.message}`);
+                  logError(`Error saving favicon: ${currentUrl}: ${err.message}`);
                   callback(null, faviconPath);
                 });
               } else {
@@ -406,7 +435,7 @@ function downloadFavicon(domain, callback) {
                 callback(null, faviconPath);
               }
             }).on('error', err => {
-              console.error(`Error following redirect:${currentUrl}: ${err.message}`);
+              logError(`Error following redirect:${currentUrl}: ${err.message}`);
               callback(null, faviconPath);
             });
             return;
@@ -438,7 +467,7 @@ function downloadFavicon(domain, callback) {
             callback(null, faviconPath);
           });
           stream.on('error', err => {
-            console.error(`Error saving favicon: ${err.message}`);
+            logError(`Error saving favicon: ${err.message}`);
             currentIndex++;
             tryDownload();
           });
@@ -449,7 +478,7 @@ function downloadFavicon(domain, callback) {
           tryDownload();
         }
       }).on('error', err => {
-        console.error(`Error downloading favicon: ${currentUrl}: ${err.message}`);
+        logError(`Error downloading favicon: ${currentUrl}: ${err.message}`);
         currentIndex++;
         tryDownload();
       }).setTimeout(5000, () => {
@@ -460,7 +489,7 @@ function downloadFavicon(domain, callback) {
       });
     } catch (err) {
       // 捕获 URL 无效等同步错误
-      console.error(`Invalid URL or request error: ${currentUrl}: ${err.message}`);
+      logError(`Invalid URL or request error: ${currentUrl}: ${err.message}`);
       currentIndex++;
       tryDownload();
     }
@@ -561,7 +590,7 @@ const server = http.createServer((req, res) => {
     debugLog(`Favicon for link ${linkId}, URL: ${websiteUrl}, domain: ${domain}`);
     
     if (!domain) {
-      console.error(`Invalid URL: ${websiteUrl}`);
+      logError(`Invalid URL: ${websiteUrl}`);
       res.statusCode = 400;
       res.setHeader('Content-Type', 'application/json;charset=utf-8');
       res.end(JSON.stringify({ error: 'Invalid URL' }));
@@ -593,7 +622,7 @@ const server = http.createServer((req, res) => {
       // 有缓存，直接返回
       fs.readFile(faviconPath, (err, content) => {
         if (err) {
-          console.error(`Error reading cached favicon: ${err.message}`);
+          logError(`Error reading cached favicon: ${err.message}`);
           // 读取失败，返回默认图标
           serveDefaultFavicon(res);
         } else {
@@ -761,7 +790,7 @@ const server = http.createServer((req, res) => {
                       fs.unlinkSync(oldFaviconPath);
                       debugLog(`Deleted old favicon: ${oldFaviconPath}`);
                     } catch (err) {
-                      console.error(`Failed to delete old favicon: ${err.message}`);
+                      logError(`Failed to delete old favicon: ${err.message}`);
                     }
                   }
                 }
@@ -787,7 +816,7 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ code: 1, message: 'Tab not found' }));
         }
       } catch (err) {
-        console.error('Update error:', err);
+        logError('Update error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -810,7 +839,7 @@ const server = http.createServer((req, res) => {
         debugLog('Title updated successfully');
         res.end(JSON.stringify({ code: 0 }));
       } catch (err) {
-        console.error('Update title error:', err);
+        logError('Update title error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -847,7 +876,7 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ code: 1, message: 'Tab not found' }));
         }
       } catch (err) {
-        console.error('Update order error:', err);
+        logError('Update order error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -867,7 +896,7 @@ const server = http.createServer((req, res) => {
         // iconSize 现在存储在 localStorage 中，不需要写入文件
         res.end(JSON.stringify({ code: 0 }));
       } catch (err) {
-        console.error('Update icon size error:', err);
+        logError('Update icon size error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -972,7 +1001,7 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ code: 0, added: newLinks.length, skipped: duplicateCount }));
         }
       } catch (err) {
-        console.error('Import error:', err);
+        logError('Import error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -1000,7 +1029,7 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ code: 1, message: 'Tab not found' }));
         }
       } catch (err) {
-        console.error('Switch tab error:', err);
+        logError('Switch tab error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -1029,7 +1058,7 @@ const server = http.createServer((req, res) => {
         debugLog('Tab added successfully');
         res.end(JSON.stringify({ code: 0, tabId: newTab.id }));
       } catch (err) {
-        console.error('Add tab error:', err);
+        logError('Add tab error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -1085,7 +1114,7 @@ const server = http.createServer((req, res) => {
         debugLog('Tab deleted successfully');
         res.end(JSON.stringify({ code: 0 }));
       } catch (err) {
-        console.error('Delete tab error:', err);
+        logError('Delete tab error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -1118,7 +1147,7 @@ const server = http.createServer((req, res) => {
         debugLog('Tab order updated successfully');
         res.end(JSON.stringify({ code: 0 }));
       } catch (err) {
-        console.error('Update tab order error:', err);
+        logError('Update tab order error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -1147,7 +1176,7 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ code: 1, message: 'Tab not found' }));
         }
       } catch (err) {
-        console.error('Update tab name error:', err);
+        logError('Update tab name error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -1193,7 +1222,7 @@ const server = http.createServer((req, res) => {
         debugLog('Link moved successfully');
         res.end(JSON.stringify({ code: 0 }));
       } catch (err) {
-        console.error('Move link error:', err);
+        logError('Move link error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -1259,7 +1288,7 @@ const server = http.createServer((req, res) => {
         url: constantsData.url || ''
       }));
     } catch (err) {
-      console.error('Failed to read constants:', err);
+      logError('Failed to read constants:', err);
       res.end(JSON.stringify({ 
         code: 0, 
         version: '1.0.0',
@@ -1311,7 +1340,7 @@ const server = http.createServer((req, res) => {
         debugLog('Config saved successfully');
         res.end(JSON.stringify({ code: 0 }));
       } catch (err) {
-        console.error('Save config error:', err);
+        logError('Save config error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -1337,7 +1366,7 @@ const server = http.createServer((req, res) => {
         debugLog('System config saved successfully');
         res.end(JSON.stringify({ code: 0 }));
       } catch (err) {
-        console.error('Save system config error:', err);
+        logError('Save system config error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -1403,7 +1432,7 @@ const server = http.createServer((req, res) => {
             fs.unlinkSync(faviconPath);
             debugLog(`Deleted cached favicon: ${faviconPath}`);
           } catch (err) {
-            console.error(`Failed to delete cached favicon: ${err.message}`);
+            logError(`Failed to delete cached favicon: ${err.message}`);
           }
         }
         
@@ -1418,7 +1447,7 @@ const server = http.createServer((req, res) => {
         
         res.end(JSON.stringify({ code: 0, message: 'Favicon refresh started' }));
       } catch (err) {
-        console.error('Refresh favicon error:', err);
+        logError('Refresh favicon error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
@@ -1433,23 +1462,24 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log('');
-  console.log('========================================');
-  console.log(`  ${constants.copyright} v${constants.version}`);
+  const timestamp = formatTimestamp();
+  logInfo('');
+  logInfo('========================================');
+  logInfo(`  ${constants.copyright} v${constants.version}`);
   if (constants.url) {
-    console.log(`  ${constants.url}`);
+    logInfo(`  ${constants.url}`);
   }
-  console.log('========================================');
-  console.log('');
-  console.log(`Service started: http://localhost:${PORT}`);
-  console.log(`DataFile: ${DATA_FILE}`);
-  console.log(`ConfigFile: ${CONFIG_FILE}`);
-  console.log(`SettingFile: ${SETTING_FILE}`);
-  console.log(`Port: ${config.port || 8080}`);
+  logInfo('========================================');
+  logInfo('');
+  logInfo(`Service started: http://localhost:${PORT}`);
+  logInfo(`DataFile: ${DATA_FILE}`);
+  logInfo(`ConfigFile: ${CONFIG_FILE}`);
+  logInfo(`SettingFile: ${SETTING_FILE}`);
+  logInfo(`Port: ${config.port || 8080}`);
   
   // 从 setting.ini 读取 debug 配置
   const systemConfig = readSystemConfig();
   const debugMode = systemConfig.debug === 'true';
-  console.log(`DebugMode：${debugMode ? 'ENABLED' : 'DISABLED'}`);
-  console.log('');
+  logInfo(`DebugMode：${debugMode ? 'ENABLED' : 'DISABLED'}`);
+  logInfo('');
 });
