@@ -367,96 +367,103 @@ function downloadFavicon(domain, callback) {
     const currentUrl = urls[currentIndex];
     debugLog(`Trying to download favicon from: ${currentUrl}`);
     
-    https.get(currentUrl, { timeout: 5000 }, res => {
-      debugLog(`Response status: ${res.statusCode}, Content-Type: ${res.headers['content-type']}`);
-      
-      // 处理重定向
-      if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307) {
-        const redirectUrl = res.headers.location;
-        if (redirectUrl) {
-          debugLog(`Redirecting to: ${redirectUrl}`);
-          res.resume(); // 消耗当前响应
-          // 递归调用，尝试重定向后的 URL
-          currentIndex = urls.length; // 停止当前循环
-          https.get(redirectUrl, { timeout: 5000 }, redirectRes => {
-            debugLog(`Redirect response status: ${redirectRes.statusCode}, Content-Type: ${redirectRes.headers['content-type']}`);
-            if (redirectRes.statusCode === 200 && redirectRes.headers['content-type'] && 
-                (redirectRes.headers['content-type'].includes('image') || redirectRes.headers['content-type'].includes('octet-stream'))) {
-              const stream = fs.createWriteStream(faviconPath);
-              redirectRes.pipe(stream);
-              stream.on('finish', () => {
-                stream.close();
-                const stats = fs.statSync(faviconPath);
-                if (stats.size < 100) {
-                  debugLog(`Downloaded file too small (${stats.size} bytes), might be an error page`);
-                  fs.unlinkSync(faviconPath);
+    try {
+      https.get(currentUrl, { timeout: 5000 }, res => {
+        debugLog(`Response status: ${res.statusCode}, Content-Type: ${res.headers['content-type']}`);
+        
+        // 处理重定向
+        if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307) {
+          const redirectUrl = res.headers.location;
+          if (redirectUrl) {
+            debugLog(`Redirecting to: ${redirectUrl}`);
+            res.resume(); // 消耗当前响应
+            // 递归调用，尝试重定向后的 URL
+            currentIndex = urls.length; // 停止当前循环
+            https.get(redirectUrl, { timeout: 5000 }, redirectRes => {
+              debugLog(`Redirect response status: ${redirectRes.statusCode}, Content-Type: ${redirectRes.headers['content-type']}`);
+              if (redirectRes.statusCode === 200 && redirectRes.headers['content-type'] && 
+                  (redirectRes.headers['content-type'].includes('image') || redirectRes.headers['content-type'].includes('octet-stream'))) {
+                const stream = fs.createWriteStream(faviconPath);
+                redirectRes.pipe(stream);
+                stream.on('finish', () => {
+                  stream.close();
+                  const stats = fs.statSync(faviconPath);
+                  if (stats.size < 100) {
+                    debugLog(`Downloaded file too small (${stats.size} bytes), might be an error page`);
+                    fs.unlinkSync(faviconPath);
+                    callback(null, faviconPath);
+                    return;
+                  }
+                  debugLog(`Favicon saved for ${domain} (${stats.size} bytes)`);
                   callback(null, faviconPath);
-                  return;
-                }
-                debugLog(`Favicon saved for ${domain} (${stats.size} bytes)`);
+                });
+                stream.on('error', err => {
+                  console.error(`Error saving favicon: ${currentUrl}: ${err.message}`);
+                  callback(null, faviconPath);
+                });
+              } else {
+                redirectRes.resume();
                 callback(null, faviconPath);
-              });
-              stream.on('error', err => {
-                console.error(`Error saving favicon: ${currentUrl}: ${err.message}`);
-                callback(null, faviconPath);
-              });
-            } else {
-              redirectRes.resume();
+              }
+            }).on('error', err => {
+              console.error(`Error following redirect:${currentUrl}: ${err.message}`);
               callback(null, faviconPath);
-            }
-          }).on('error', err => {
-            console.error(`Error following redirect:${currentUrl}: ${err.message}`);
-            callback(null, faviconPath);
-          });
-          return;
-        }
-      }
-      
-      if (res.statusCode === 200 && res.headers['content-type'] && 
-          (res.headers['content-type'].includes('image') || res.headers['content-type'].includes('octet-stream'))) {
-        const stream = fs.createWriteStream(faviconPath);
-        let downloadedSize = 0;
-        
-        res.on('data', chunk => {
-          downloadedSize += chunk.length;
-        });
-        
-        res.pipe(stream);
-        stream.on('finish', () => {
-          stream.close();
-          // 检查文件大小，如果太小（小于100字节）可能是错误页面
-          const stats = fs.statSync(faviconPath);
-          if (stats.size < 100) {
-            debugLog(`Downloaded file too small (${stats.size} bytes), might be an error page`);
-            fs.unlinkSync(faviconPath); // 删除无效文件
-            currentIndex++;
-            tryDownload();
+            });
             return;
           }
-          debugLog(`Favicon saved for ${domain} (${stats.size} bytes)`);
-          callback(null, faviconPath);
-        });
-        stream.on('error', err => {
-          console.error(`Error saving favicon: ${err.message}`);
+        }
+        
+        if (res.statusCode === 200 && res.headers['content-type'] && 
+            (res.headers['content-type'].includes('image') || res.headers['content-type'].includes('octet-stream'))) {
+          const stream = fs.createWriteStream(faviconPath);
+          let downloadedSize = 0;
+          
+          res.on('data', chunk => {
+            downloadedSize += chunk.length;
+          });
+          
+          res.pipe(stream);
+          stream.on('finish', () => {
+            stream.close();
+            // 检查文件大小，如果太小（小于100字节）可能是错误页面
+            const stats = fs.statSync(faviconPath);
+            if (stats.size < 100) {
+              debugLog(`Downloaded file too small (${stats.size} bytes), might be an error page`);
+              fs.unlinkSync(faviconPath); // 删除无效文件
+              currentIndex++;
+              tryDownload();
+              return;
+            }
+            debugLog(`Favicon saved for ${domain} (${stats.size} bytes)`);
+            callback(null, faviconPath);
+          });
+          stream.on('error', err => {
+            console.error(`Error saving favicon: ${err.message}`);
+            currentIndex++;
+            tryDownload();
+          });
+        } else {
+          // 不是图片或状态码不对，尝试下一个 URL
+          res.resume(); // 消耗数据以释放内存
           currentIndex++;
           tryDownload();
-        });
-      } else {
-        // 不是图片或状态码不对，尝试下一个 URL
-        res.resume(); // 消耗数据以释放内存
+        }
+      }).on('error', err => {
+        console.error(`Error downloading favicon: ${currentUrl}: ${err.message}`);
         currentIndex++;
         tryDownload();
-      }
-    }).on('error', err => {
-      console.error(`Error downloading favicon: ${currentUrl}: ${err.message}`);
+      }).setTimeout(5000, () => {
+        // 超时，尝试下一个
+        debugLog(`Timeout downloading from ${currentUrl}`);
+        currentIndex++;
+        tryDownload();
+      });
+    } catch (err) {
+      // 捕获 URL 无效等同步错误
+      console.error(`Invalid URL or request error: ${currentUrl}: ${err.message}`);
       currentIndex++;
       tryDownload();
-    }).setTimeout(5000, () => {
-      // 超时，尝试下一个
-      debugLog(`Timeout downloading from ${currentUrl}`);
-      currentIndex++;
-      tryDownload();
-    });
+    }
   }
   
   tryDownload();

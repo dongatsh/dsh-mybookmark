@@ -4,8 +4,6 @@
 
 ## 功能
 
-v1.0.0
-
 * 保存自己感兴趣的网站地址
 
 * 所有数据都储存在本地文件中，信息绝对不会泄露！
@@ -16,33 +14,21 @@ v1.0.0
 
 * node.js 最低版本 v8.x 或者更高，推荐 v12.x LTS 或更高版本
 
-## 安装
+## 安装和运行
+
+* 搭建 node 环境
 
 * 下载文件 mybookmark 文件
 
-* 点击 start.bat 即可运行
+* Windows 下点击 start.bat 即可运行
+
+* 更多安装和运行信息参见 [安装和运行](doc/install.md)
+
 
 ## 默认地址
 
 * http://127.0.0.1:8080
 
-## 修改端口
-
-* 把 mybookmark/config.json.sample 复制 config.json
-
-```
-    cp config.json.sample config.json
-```
-
-* 修改 mybookmark/config.json 文件
-
-```json
-    {
-        "port": 8080
-    }
-```
-
-修改其中的 port，可改成需要的端口。
 
 ## 运行界面
 
