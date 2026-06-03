@@ -29,8 +29,8 @@
                     <button onclick="openAddModal()" style="flex: 0 0 auto;" data-i18n="addBookmark">添加收藏</button>
                     <button onclick="openSettingsModal()" style="background: #718096;" data-i18n="settings">⚙ 设置</button>
                     <button onclick="exportData()" style="background: #805ad5;" data-i18n="exportData">导出数据</button>
-                    <button onclick="document.getElementById('importFile').click()" style="background: #38b2ac;" data-i18n="importData">导入数据</button>
-                    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+                    <button onclick="openImportTypeModal()" style="background: #38b2ac;" data-i18n="importData">导入数据</button>
+                    <input type="file" id="importFile" accept=".json,.html" style="display:none" onchange="handleImportFile(event)">
                 </div>
             </div>
             
@@ -141,6 +141,49 @@
         </div>
     </div>
 
+    <!-- Import Type Selection Modal -->
+    <div class="modal-overlay" id="importTypeModal">
+        <div class="modal" style="max-width: 500px;">
+            <h3 data-i18n="importData">导入数据</h3>
+            
+            <!-- Step 1: Select import type -->
+            <div style="margin-bottom: 20px;">
+                <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="importTypeLabel">选择导入类型：</label>
+                <div style="display: flex;flex-direction: column;gap: 10px;">
+                    <label style="display: flex;align-items: center;gap: 10px;padding: 12px;border: 2px solid #e2e8f0;border-radius: 8px;cursor: pointer;transition: all 0.3s;" onmouseover="this.style.borderColor='#4299e1';this.style.background='#ebf8ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='white'">
+                        <input type="radio" name="importType" value="mybookmark" checked onchange="onImportTypeChange()" style="width: 18px;height: 18px;cursor: pointer;">
+                        <span style="font-size: 14px;color: #2d3748;" data-i18n="importMyBookmark">我的收藏夹导出文件</span>
+                    </label>
+                    <label style="display: flex;align-items: center;gap: 10px;padding: 12px;border: 2px solid #e2e8f0;border-radius: 8px;cursor: pointer;transition: all 0.3s;" onmouseover="this.style.borderColor='#4299e1';this.style.background='#ebf8ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='white'">
+                        <input type="radio" name="importType" value="chrome" onchange="onImportTypeChange()" style="width: 18px;height: 18px;cursor: pointer;">
+                        <span style="font-size: 14px;color: #2d3748;" data-i18n="importChromeEdge">Chrome/Edge导出文件</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Step 2: Select file -->
+            <div style="margin-bottom: 20px;">
+                <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="selectFileLabel">选择文件：</label>
+                <button onclick="triggerFileSelect()" style="width: 100%;padding: 12px;background: #4299e1;color: white;border: none;border-radius: 6px;cursor: pointer;font-size: 14px;transition: background 0.3s;" onmouseover="this.style.background='#3182ce'" onmouseout="this.style.background='#4299e1'">
+                    <span data-i18n="clickToSelectFile">📁 点击选择文件</span>
+                </button>
+                <div id="selectedFileName" style="margin-top: 8px;padding: 8px;background: #f7fafc;border-radius: 4px;font-size: 13px;color: #4a5568;display: none;word-break: break-all;">
+                </div>
+            </div>
+            
+            <!-- Tab selection for Chrome import (hidden by default) -->
+            <div id="chromeImportTabSection" style="display: none;margin-bottom: 20px;">
+                <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="selectTabForImport">请选择要导入到的选项卡：</label>
+                <select class="modal-input" id="chromeImportTabSelect"></select>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="cancel-btn" onclick="closeImportTypeModal()" data-i18n="cancel">取消</button>
+                <button class="save-btn" id="startImportBtn" onclick="startImportProcess()" data-i18n="startImport" disabled style="opacity: 0.5;cursor: not-allowed;">开始导入</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Export Modal -->
     <div class="modal-overlay" id="exportModal">
         <div class="modal">
@@ -176,6 +219,13 @@
                 addBookmark: '添加收藏',
                 exportData: '导出数据',
                 importData: '导入数据',
+                importTypeLabel: '选择导入类型：',
+                importMyBookmark: '我的收藏夹导出文件',
+                importChromeEdge: 'Chrome/Edge导出文件',
+                selectTabForImport: '请选择要导入到的选项卡：',
+                startImport: '开始导入',
+                selectFileLabel: '选择文件：',
+                clickToSelectFile: '📁 点击选择文件',
                 noBookmarks: '暂无收藏，添加你的第一个网址',
                 editBookmark: '编辑收藏',
                 bookmarkNamePlaceholder: '网址名称（可为空）',
@@ -258,6 +308,13 @@
                 addBookmark: 'Add Bookmark',
                 exportData: 'Export',
                 importData: 'Import',
+                importTypeLabel: 'Select Import Type:',
+                importMyBookmark: 'My Bookmark Export File',
+                importChromeEdge: 'Chrome/Edge Export File',
+                selectTabForImport: 'Please select the tab to import to:',
+                startImport: 'Start Import',
+                selectFileLabel: 'Select File:',
+                clickToSelectFile: '📁 Click to Select File',
                 noBookmarks: 'No bookmarks yet, add your first one',
                 editBookmark: 'Edit Bookmark',
                 bookmarkNamePlaceholder: 'Website name (optional)',
@@ -1489,14 +1546,282 @@
             }
         }
 
-        // 导入数据
-        async function importData(event) {
+        // 全局变量存储待导入的文件
+        let pendingImportFile = null;
+        
+        // 触发文件选择
+        function triggerFileSelect() {
+            const importType = document.querySelector('input[name="importType"]:checked').value;
+            const fileInput = document.getElementById('importFile');
+            
+            // 根据导入类型设置接受的文件后缀
+            if (importType === 'chrome') {
+                fileInput.accept = '.html,.htm';
+            } else {
+                fileInput.accept = '.json';
+            }
+            
+            fileInput.click();
+        }
+        
+        // 处理导入文件选择
+        function handleImportFile(event) {
             const file = event.target.files[0];
             if (!file) return;
             
+            pendingImportFile = file;
+            
+            // 显示文件名
+            const fileNameDiv = document.getElementById('selectedFileName');
+            fileNameDiv.textContent = `📄 ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+            fileNameDiv.style.display = 'block';
+            
+            // 启用开始导入按钮
+            const startBtn = document.getElementById('startImportBtn');
+            startBtn.disabled = false;
+            startBtn.style.opacity = '1';
+            startBtn.style.cursor = 'pointer';
+        }
+        
+        // 打开导入类型选择对话框
+        async function openImportTypeModal() {
+            document.getElementById('importTypeModal').style.display = 'flex';
+            
+            // 重置选项
+            document.querySelector('input[name="importType"][value="mybookmark"]').checked = true;
+            document.getElementById('chromeImportTabSection').style.display = 'none';
+            
+            // 重置文件选择
+            pendingImportFile = null;
+            document.getElementById('importFile').value = '';
+            const fileNameDiv = document.getElementById('selectedFileName');
+            fileNameDiv.style.display = 'none';
+            fileNameDiv.textContent = '';
+            
+            // 禁用开始导入按钮
+            const startBtn = document.getElementById('startImportBtn');
+            startBtn.disabled = true;
+            startBtn.style.opacity = '0.5';
+            startBtn.style.cursor = 'not-allowed';
+            
+            // 加载选项卡列表
+            await loadImportTabOptions();
+        }
+        
+        // 关闭导入类型选择对话框
+        function closeImportTypeModal() {
+            document.getElementById('importTypeModal').style.display = 'none';
+            pendingImportFile = null;
+            document.getElementById('importFile').value = '';
+            
+            // 隐藏文件名显示
+            const fileNameDiv = document.getElementById('selectedFileName');
+            fileNameDiv.style.display = 'none';
+            fileNameDiv.textContent = '';
+            
+            // 禁用开始导入按钮
+            const startBtn = document.getElementById('startImportBtn');
+            startBtn.disabled = true;
+            startBtn.style.opacity = '0.5';
+            startBtn.style.cursor = 'not-allowed';
+        }
+        
+        // 加载导入目标选项卡选项
+        async function loadImportTabOptions() {
             try {
+                const res = await fetch('/api/get');
+                const data = await res.json();
+                const tabs = data.tabs || [];
+                
+                const select = document.getElementById('chromeImportTabSelect');
+                select.innerHTML = '';
+                
+                tabs.forEach(tab => {
+                    const option = document.createElement('option');
+                    option.value = tab.id;
+                    option.textContent = `${tab.name} (${tab.links ? tab.links.length : 0}${t('sitesCount')})`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to load tabs:', error);
+            }
+        }
+        
+        // 导入类型改变时的处理
+        function onImportTypeChange() {
+            const importType = document.querySelector('input[name="importType"]:checked').value;
+            const chromeSection = document.getElementById('chromeImportTabSection');
+            const fileInput = document.getElementById('importFile');
+            
+            if (importType === 'chrome') {
+                chromeSection.style.display = 'block';
+                fileInput.accept = '.html,.htm';
+            } else {
+                chromeSection.style.display = 'none';
+                fileInput.accept = '.json';
+            }
+            
+            // 如果已经选择了文件，清空它（因为类型改变了）
+            if (pendingImportFile) {
+                pendingImportFile = null;
+                fileInput.value = '';
+                const fileNameDiv = document.getElementById('selectedFileName');
+                fileNameDiv.style.display = 'none';
+                fileNameDiv.textContent = '';
+                
+                // 禁用开始导入按钮
+                const startBtn = document.getElementById('startImportBtn');
+                startBtn.disabled = true;
+                startBtn.style.opacity = '0.5';
+                startBtn.style.cursor = 'not-allowed';
+            }
+        }
+        
+        // 开始导入流程
+        async function startImportProcess() {
+            if (!pendingImportFile) {
+                showToast(t('invalidFileFormat'), 'error');
+                return;
+            }
+            
+            const importType = document.querySelector('input[name="importType"]:checked').value;
+            
+            // 保存文件引用，因为 closeImportTypeModal 会清空 pendingImportFile
+            const fileToImport = pendingImportFile;
+            
+            // 先关闭对话框
+            closeImportTypeModal();
+            
+            if (importType === 'mybookmark') {
+                // 使用原有的导入逻辑
+                await importMyBookmarkData(fileToImport);
+            } else if (importType === 'chrome') {
+                // 使用 Chrome/Edge 导入逻辑
+                const targetTabId = document.getElementById('chromeImportTabSelect').value;
+                if (!targetTabId) {
+                    showToast(t('selectTabForImport'), 'error');
+                    return;
+                }
+                await importChromeBookmarks(fileToImport, targetTabId);
+            }
+        }
+        
+        // 解析 Chrome/Edge 书签 HTML 文件
+        function parseChromeBookmarks(htmlContent) {
+            const bookmarks = [];
+            
+            try {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlContent, 'text/html');
+                
+                // 查找所有 <A> 标签，不仅限于 dt > a
+                const links = doc.querySelectorAll('a[href]');
+                console.log('Found', links.length, 'link elements in HTML');
+                
+                links.forEach((link, index) => {
+                    const href = link.getAttribute('href');
+                    const title = link.textContent.trim();
+                    
+                    // 只处理 http/https 链接，跳过 file:// 等特殊协议
+                    if (href && (href.startsWith('http://') || href.startsWith('https://')) && title) {
+                        bookmarks.push({
+                            name: title,
+                            url: href
+                        });
+                        if (index < 3) {
+                            console.log('Parsed bookmark:', title, href);
+                        }
+                    }
+                });
+            } catch (parseError) {
+                console.error('Error parsing HTML:', parseError);
+            }
+            
+            return bookmarks;
+        }
+        
+        // 导入 Chrome/Edge 书签
+        async function importChromeBookmarks(file, targetTabId) {
+            try {
+                console.log('Starting import of Chrome bookmarks file:', file.name);
                 const text = await file.text();
-                const data = JSON.parse(text);
+                console.log('File content length:', text.length);
+                console.log('First 200 chars:', text.substring(0, 200));
+                
+                const bookmarks = parseChromeBookmarks(text);
+                console.log('Parsed', bookmarks.length, 'bookmarks');
+                
+                if (bookmarks.length === 0) {
+                    console.warn('No bookmarks found in file');
+                    showToast('文件中没有找到有效的书签（只支持 http/https 链接）', 'error');
+                    return;
+                }
+                
+                // 确认导入
+                customConfirm(`${t('confirmImport')} ${bookmarks.length} ${t('bookmarks')}？${t('willMergeWithExisting')}`, async (confirmed) => {
+                    if (!confirmed) {
+                        return;
+                    }
+                    
+                    // 逐个添加到指定选项卡
+                    let addedCount = 0;
+                    let failedCount = 0;
+                    
+                    for (const bookmark of bookmarks) {
+                        try {
+                            const response = await fetch('/api/add', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    name: bookmark.name,
+                                    url: bookmark.url,
+                                    tabId: targetTabId
+                                })
+                            });
+                            
+                            const result = await response.json();
+                            if (result.code === 0) {
+                                addedCount++;
+                            } else {
+                                failedCount++;
+                                console.warn('Failed to add bookmark:', bookmark.name, result.message);
+                            }
+                        } catch (err) {
+                            console.error('Failed to add bookmark:', bookmark.name, err);
+                            failedCount++;
+                        }
+                    }
+                    
+                    showToast(`${t('importComplete')}${addedCount}${t('skipDuplicate')}${failedCount}`, 'success');
+                    
+                    // 重新加载当前选项卡的数据
+                    await loadLinks();
+                });
+            } catch (error) {
+                console.error('Import Chrome bookmarks error:', error);
+                showToast(t('importFailed') + error.message, 'error');
+            }
+        }
+        
+        // 导入 My Bookmark 数据（原有逻辑）
+        async function importMyBookmarkData(file) {
+            try {
+                console.log('Starting import of My Bookmark file:', file.name);
+                const text = await file.text();
+                console.log('File content length:', text.length);
+                console.log('First 200 chars:', text.substring(0, 200));
+                
+                let data;
+                try {
+                    data = JSON.parse(text);
+                    console.log('JSON parsed successfully');
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    showToast(t('importFailed') + 'JSON格式错误: ' + parseError.message, 'error');
+                    return;
+                }
                 
                 // 计算要导入的项目数量
                 let itemCount = 0;
@@ -1512,10 +1837,16 @@
                     itemCount = data.links.length;
                 }
                 
+                console.log('Found', itemCount, 'bookmarks to import');
+                
+                if (itemCount === 0) {
+                    showToast('文件中没有找到可导入的书签', 'error');
+                    return;
+                }
+                
                 // 确认导入
                 customConfirm(`${t('confirmImport')} ${itemCount} ${t('bookmarks')}？${t('willMergeWithExisting')}`, async (confirmed) => {
                     if (!confirmed) {
-                        event.target.value = ''; // 清空文件选择
                         return;
                     }
                 
@@ -1565,11 +1896,8 @@
                 });
             } catch (error) {
                 console.error('Import error:', error);
-                showToast(t('importFailed') + t('invalidFileFormat'), 'error');
+                showToast(t('importFailed') + error.message, 'error');
             }
-            
-            // 清空文件选择，允许重复导入同一文件
-            event.target.value = '';
         }
 
         // 显示移动到Tab的弹窗
