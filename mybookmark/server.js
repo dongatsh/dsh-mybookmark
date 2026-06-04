@@ -1627,8 +1627,8 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       try {
-        const { port, copyright } = JSON.parse(body);
-        debugLog('Saving config:', { port, copyright });
+        const { copyright } = JSON.parse(body);
+        debugLog('Saving config:', { copyright });
         
         // 读取现有配置
         let existingConfig = {};
@@ -1638,22 +1638,14 @@ const server = http.createServer((req, res) => {
           // 如果读取失败，使用空对象
         }
         
-        // 更新端口和版权信息到 config.json
+        // 更新配置到 config.json（保留原有端口）
         const newConfig = {
-          port: port ? parseInt(port) : existingConfig.port || 8080
+          port: existingConfig.port || 8080
         };
         
         // 如果提供了版权信息，保存到配置中
         if (copyright !== undefined) {
           newConfig.copyright = copyright;
-        }
-        
-        // 验证端口
-        const portNum = parseInt(newConfig.port);
-        if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
-          res.statusCode = 400;
-          res.end(JSON.stringify({ code: 1, message: 'Invalid port number' }));
-          return;
         }
         
         fs.writeFileSync(CONFIG_FILE, JSON.stringify(newConfig, null, 2), 'utf8');

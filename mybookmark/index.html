@@ -105,7 +105,7 @@
             </div>
             <div style="margin-bottom: 15px;">
                 <label style="display: block;margin-bottom: 5px;color: #4a5568;font-weight: bold;" data-i18n="portNumber">端口号：</label>
-                <input type="number" class="modal-input" id="settingPort" placeholder="8080" min="1" max="65535" style="margin-bottom: 5px;">
+                <input type="number" class="modal-input" id="settingPort" placeholder="8080" min="1" max="65535" readonly style="margin-bottom: 5px;background-color: #f7fafc;color: #718096;cursor: not-allowed;">
             </div>
             <div style="margin-bottom: 15px;">
                 <label style="display: block;margin-bottom: 5px;color: #4a5568;font-weight: bold;" data-i18n="copyright">版权信息：</label>
@@ -119,7 +119,7 @@
             </div>
             <div style="background: #fffbeb;border-left: 4px solid #f59e0b;padding: 12px;margin-bottom: 20px;border-radius: 4px;">
                 <p style="color: #92400e;font-size: 13px;margin: 0;" data-i18n="restartRequired">
-                    ⚠️ <strong>注意：</strong>如果修改了端口，需要重启服务后才能生效。
+                    ⚠️ <strong>注意：</strong>端口号不可在此修改，如需修改请编辑 config.json 文件并重启服务。
                 </p>
             </div>
             <div style="text-align: center;margin-bottom: 15px;display: flex;justify-content: center;gap: 20px;">
@@ -285,8 +285,8 @@
                 copyright: '版权信息',
                 portNumber: '端口号',
                 debugMode: '开启调试模式',
-                restartRequired: '⚠️ 注意：如果修改了端口，需要重启服务后才能生效。',
-                configSaved: '配置保存成功！如果修改了端口，请重启服务。',
+                restartRequired: '⚠️ 注意：端口号不可在此修改，如需修改请编辑 config.json 文件并重启服务。',
+                configSaved: '配置保存成功！',
                 configSaveFailed: '保存配置失败：',
                 getConfigFailed: '获取配置失败',
                 enterPort: '请输入端口号',
@@ -374,8 +374,8 @@
                 copyright: 'Copyright',
                 portNumber: 'Port Number',
                 debugMode: 'Enable Debug Mode',
-                restartRequired: '⚠️ Note: If you change the port, you need to restart the service for it to take effect.',
-                configSaved: 'Configuration saved! If you changed the port, please restart the service.',
+                restartRequired: '⚠️ Note: Port number cannot be modified here. To change it, please edit the config.json file and restart the service.',
+                configSaved: 'Configuration saved! ',
                 configSaveFailed: 'Failed to save configuration: ',
                 getConfigFailed: 'Failed to get configuration',
                 enterPort: 'Please enter port number',
@@ -1897,7 +1897,6 @@
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                port: data.config.port,
                                 copyright: data.config.copyright
                             })
                         });
@@ -2024,6 +2023,7 @@
                     // 设置标题
                     document.getElementById('settingTitle').value = titleResult.title || '';
                     
+                    // 设置端口为只读显示
                     document.getElementById('settingPort').value = configResult.port;
                     document.getElementById('settingDebug').checked = systemConfigResult.debug;
                     
@@ -2052,20 +2052,8 @@
         // 保存设置
         async function saveSettings() {
             const title = document.getElementById('settingTitle').value.trim();
-            const port = document.getElementById('settingPort').value.trim();
             const debug = document.getElementById('settingDebug').checked;
             const copyright = document.getElementById('settingCopyright').value.trim();
-            
-            if (!port) {
-                showToast(t('enterPort'), 'warning');
-                return;
-            }
-            
-            const portNum = parseInt(port);
-            if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
-                showToast(t('invalidPort'), 'warning');
-                return;
-            }
             
             try {
                 // 保存标题
@@ -2086,11 +2074,11 @@
                     console.log('Title saved');
                 }
                 
-                // 保存 config.json 配置
+                // 保存 config.json 配置（不包含端口）
                 const configResponse = await fetch('/api/saveConfig', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ port: portNum, copyright: copyright })
+                    body: JSON.stringify({ copyright: copyright })
                 });
                 
                 const configResult = await configResponse.json();
