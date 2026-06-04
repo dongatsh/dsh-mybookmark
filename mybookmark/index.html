@@ -14,9 +14,9 @@
             <div style="display: flex;justify-content: space-between;align-items: center;width: 100%;gap: 15px;">
                 <!-- 左侧：图标大小选择 -->
                 <div class="icon-size-buttons" style="margin: 0;">
-                    <button class="icon-size-btn" id="btnLarge" onclick="setIconSize('large')" data-i18n="largeIcon">大图标</button>
-                    <button class="icon-size-btn" id="btnMedium" onclick="setIconSize('medium')" data-i18n="mediumIcon">中图标</button>
-                    <button class="icon-size-btn" id="btnSmall" onclick="setIconSize('small')" data-i18n="smallIcon">小图标</button>
+                    <button class="icon-size-btn" id="btnLarge" onclick="setIconSize('large')" title="大图标" data-i18n-title="largeIcon">🔲</button>
+                    <button class="icon-size-btn" id="btnMedium" onclick="setIconSize('medium')" title="中图标" data-i18n-title="mediumIcon">◻️</button>
+                    <button class="icon-size-btn" id="btnSmall" onclick="setIconSize('small')" title="小图标" data-i18n-title="smallIcon">▪️</button>
                 </div>
                 
                 <!-- 中间：标题 -->
@@ -25,11 +25,11 @@
                 </div>
                 
                 <!-- 右侧：操作按钮 -->
-                <div style="display: flex;gap: 10px;flex-shrink: 0;">
-                    <button onclick="openAddModal()" style="flex: 0 0 auto;" data-i18n="addBookmark">添加收藏</button>
-                    <button onclick="openSettingsModal()" style="background: #718096;" data-i18n="settings">⚙ 设置</button>
-                    <button onclick="exportData()" style="background: #805ad5;" data-i18n="exportData">导出数据</button>
-                    <button onclick="openImportTypeModal()" style="background: #38b2ac;" data-i18n="importData">导入数据</button>
+                <div style="display: flex;gap: 8px;flex-shrink: 0;">
+                    <button onclick="openAddModal()" class="toolbar-icon-btn" title="添加收藏" data-i18n-title="addBookmark">➕</button>
+                    <button onclick="openSettingsModal()" class="toolbar-icon-btn toolbar-settings-btn" title="设置" data-i18n-title="settings">⚙️</button>
+                    <button onclick="exportData()" class="toolbar-icon-btn toolbar-export-btn" title="导出数据" data-i18n-title="exportData">📤</button>
+                    <button onclick="openImportTypeModal()" class="toolbar-icon-btn toolbar-import-btn" title="导入数据" data-i18n-title="importData">📥</button>
                     <input type="file" id="importFile" accept=".json,.html" style="display:none" onchange="handleImportFile(event)">
                 </div>
             </div>
@@ -418,6 +418,14 @@
                 }
             });
             
+            // 更新所有带有 data-i18n-title 属性的元素（title 属性）
+            document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                const key = el.getAttribute('data-i18n-title');
+                if (texts[key]) {
+                    el.title = texts[key];
+                }
+            });
+            
             // 更新语言文本状态
             const langZh = document.getElementById('langZh');
             const langEn = document.getElementById('langEn');
@@ -563,9 +571,9 @@
                             ${item.note ? `<div class="link-note">${item.note}</div>` : ''}
                         </div>
                         <div class="card-actions">
-                            <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')">${t('openButton')}</button>
-                            <button class="card-btn edit-btn" onclick="openEditModal('${item.id}')">${t('editButton')}</button>
-                            <button class="card-btn del-btn" onclick="delLink('${item.id}')">${t('deleteButton')}</button>
+                            <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')" title="${t('openButton')}">🔗</button>
+                            <button class="card-btn edit-btn" onclick="openEditModal('${item.id}')" title="${t('editButton')}">✏️</button>
+                            <button class="card-btn del-btn" onclick="delLink('${item.id}')" title="${t('deleteButton')}">🗑️</button>
                         </div>
                     </div>`;
                 } else {
@@ -585,9 +593,9 @@
                         <div class="link-url"><a href="${item.url}" target="_blank">${item.url}</a></div>
                         ${item.note ? `<div class="link-note">${item.note}</div>` : ''}
                         <div class="card-actions">
-                            <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')">${t('openButton')}</button>
-                            <button class="card-btn edit-btn" onclick="openEditModal('${item.id}')">${t('editButton')}</button>
-                            <button class="card-btn del-btn" onclick="delLink('${item.id}')">${t('deleteButton')}</button>
+                            <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')" title="${t('openButton')}">🔗</button>
+                            <button class="card-btn edit-btn" onclick="openEditModal('${item.id}')" title="${t('editButton')}">✏️</button>
+                            <button class="card-btn del-btn" onclick="delLink('${item.id}')" title="${t('deleteButton')}">🗑️</button>
                         </div>
                     </div>`;
                 }
