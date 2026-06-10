@@ -143,10 +143,6 @@ button:hover {background: #3182ce;}
 .move-btn-icon:hover {background: #6b46c1;transform: scale(1.1);}
 .link-card.no-icon .move-btn-icon {opacity: 0;}
 .link-card.no-icon:hover .move-btn-icon {opacity: 1;}
-/* 刷新 Favicon 按钮 - 右上角小图标（在移动按钮左侧） */
-.refresh-favicon-btn {position: absolute;top: 8px;right: 36px;width: 24px;height: 24px;padding: 0;background: #38b2ac;color: #fff;border: none;border-radius: 50%;cursor: pointer;font-size: 14px;display: flex;align-items: center;justify-content: center;transition: all 0.3s;z-index: 10;opacity: 0;line-height: 1;}
-.link-card:hover .refresh-favicon-btn {opacity: 1;}
-.refresh-favicon-btn:hover {background: #319795;transform: scale(1.1);}
 /* URL链接样式 */
 .link-url a {color: #718096;text-decoration: none;word-break: break-all;}
 .link-url a:hover {color: #4299e1;text-decoration: underline;}
@@ -250,6 +246,8 @@ button:hover {background: #3182ce;}
 .edit-btn:hover {background: #3182ce;}
 .del-btn {background: #e53e3e;}
 .del-btn:hover {background: #c53030;}
+.refresh-btn {background: #38b2ac;}
+.refresh-btn:hover {background: #319795;}
 .empty {text-align: center;padding: 60px 20px;color: #a0aec0;grid-column: 1 / -1;}
 
 /* Edit Modal */

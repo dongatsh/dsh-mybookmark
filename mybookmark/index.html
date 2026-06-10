@@ -561,7 +561,6 @@
                          ondragover="handleDragOver(event)"
                          ondrop="handleDrop(event)">
                         <button class="move-btn-icon" onclick="showMoveToTabModal('${item.id}')" title="${t('moveToOtherTab')}">⇄</button>
-                        <button class="refresh-favicon-btn" onclick="refreshFavicon('${item.id}')" title="${t('refreshIcon')}">⟳</button>
                         <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center;">
                             <img src="${favicon}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
                         </div>
@@ -574,6 +573,7 @@
                             <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')" title="${t('openButton')}">🔗</button>
                             <button class="card-btn edit-btn" onclick="openEditModal('${item.id}')" title="${t('editButton')}">✏️</button>
                             <button class="card-btn del-btn" onclick="delLink('${item.id}')" title="${t('deleteButton')}">🗑️</button>
+                            <button class="card-btn refresh-btn" onclick="refreshFavicon('${item.id}')" title="${t('refreshIcon')}">⟳</button>
                         </div>
                     </div>`;
                 } else {
@@ -585,7 +585,6 @@
                          ondragover="handleDragOver(event)"
                          ondrop="handleDrop(event)">
                         <button class="move-btn-icon" onclick="showMoveToTabModal('${item.id}')" title="${t('moveToOtherTab')}">⇄</button>
-                        <button class="refresh-favicon-btn" onclick="refreshFavicon('${item.id}')" title="${t('refreshIcon')}">⟳</button>
                         <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center;">
                             <img src="${favicon}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
                         </div>
@@ -596,6 +595,7 @@
                             <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')" title="${t('openButton')}">🔗</button>
                             <button class="card-btn edit-btn" onclick="openEditModal('${item.id}')" title="${t('editButton')}">✏️</button>
                             <button class="card-btn del-btn" onclick="delLink('${item.id}')" title="${t('deleteButton')}">🗑️</button>
+                            <button class="card-btn refresh-btn" onclick="refreshFavicon('${item.id}')" title="${t('refreshIcon')}">⟳</button>
                         </div>
                     </div>`;
                 }
