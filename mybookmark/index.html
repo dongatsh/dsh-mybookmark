@@ -450,8 +450,9 @@
         // 页面加载读取数据
         window.onload = async function() {
             await loadConstants();
+            // 先加载 Tabs，确保 currentTabId 被正确初始化
+            await loadTabs();
             loadTitle();
-            loadTabs();
             loadLinks();
             applyLanguage(); // 应用语言设置
         };
@@ -637,9 +638,11 @@
             });
             
             // 如果没有当前选中的 tab，选中第一个并保存到 localStorage
-            if (!currentTabId && tabs.length > 0) {
+            if (!currentTabId || !tabs.find(t => t.id === currentTabId)) {
+                // 如果 currentTabId 为空，或者当前 ID 对应的 tab 不存在（比如首次打开时 default tab）
                 currentTabId = tabs[0].id;
                 localStorage.setItem('currentTabId', currentTabId);
+                console.log('Initialized currentTabId to:', currentTabId);
             }
             
             // 计算下一个 Tab 序号
