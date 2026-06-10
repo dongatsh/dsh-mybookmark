@@ -37,6 +37,7 @@ const DATA_FILE = path.join(__dirname, 'mybookmark.json');
 const FAVICONS_DIR = path.join(__dirname, 'favicons');
 const DEFAULT_FAVICON = path.join(__dirname, 'website.png');
 const SETTING_FILE = path.join(__dirname, 'setting.ini');
+const LOG_FILE = path.join(__dirname, 'mybookmark.log');
 
 // 生成随机 ID（16位十六进制字符串）
 function generateRandomId() {
@@ -258,30 +259,48 @@ function formatTimestamp() {
   return `[${year}-${month}-${day} ${hours}:${minutes}:${seconds}]`;
 }
 
-// 统一日志函数 - 带时间戳
+// 写入日志到文件
+function writeLogToFile(message) {
+  try {
+    fs.appendFileSync(LOG_FILE, message + '\n', 'utf8');
+  } catch (err) {
+    // 如果写入失败，只在控制台输出错误
+    console.error('Failed to write log file:', err.message);
+  }
+}
+
+// 统一日志函数 - 带时间戳，同时输出到控制台和文件
 function logInfo(...args) {
   const timestamp = formatTimestamp();
-  console.log(timestamp, ...args);
+  const message = [timestamp, ...args].join(' ');
+  console.log(message);
+  writeLogToFile(message);
 }
 
 function logError(...args) {
   const timestamp = formatTimestamp();
-  console.error(timestamp, ...args);
+  const message = [timestamp, ...args].join(' ');
+  console.error(message);
+  writeLogToFile('[ERROR] ' + message);
 }
 
 function logWarn(...args) {
   const timestamp = formatTimestamp();
-  console.warn(timestamp, ...args);
+  const message = [timestamp, ...args].join(' ');
+  console.warn(message);
+  writeLogToFile('[WARN] ' + message);
 }
 
-// 调试日志函数 - 每次调用时动态读取配置
+// 调试日志函数 - 每次调用时动态读取配置，同时输出到控制台和文件
 function debugLog(...args) {
   try {
     const systemConfig = readSystemConfig();
     const debugMode = systemConfig.debug === 'true';
     if (debugMode) {
       const timestamp = formatTimestamp();
-      console.log(timestamp, ...args);
+      const message = [timestamp, '[DEBUG]', ...args].join(' ');
+      console.log(message);
+      writeLogToFile(message);
     }
   } catch (err) {
     // 如果读取失败，不输出日志
