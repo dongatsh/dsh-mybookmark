@@ -1787,6 +1787,50 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // 切换卡片锁定状态
+  if (pathname === '/api/toggleLock' && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json;charset=utf-8');
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const { linkId, tabId, locked } = JSON.parse(body);
+        debugLog(`Toggle lock request for link ID: ${linkId}, tabId: ${tabId}, locked: ${locked}`);
+        
+        const data = readData();
+        
+        // 在指定 tab 中查找并更新锁定状态
+        const targetTab = data.tabs.find(t => t.id === tabId);
+        if (targetTab) {
+          const index = targetTab.links.findIndex(li => li.id === linkId);
+          if (index !== -1) {
+            // 设置或移除 locked 属性
+            if (locked === true) {
+              targetTab.links[index].locked = true;
+            } else {
+              delete targetTab.links[index].locked;
+            }
+            
+            writeData(data);
+            debugLog(`Lock status updated for link ${linkId}: ${locked}`);
+            res.end(JSON.stringify({ code: 0 }));
+          } else {
+            res.statusCode = 404;
+            res.end(JSON.stringify({ code: 1, message: 'Link not found' }));
+          }
+        } else {
+          res.statusCode = 404;
+          res.end(JSON.stringify({ code: 1, message: 'Tab not found' }));
+        }
+      } catch (err) {
+        logError('Toggle lock error:', err);
+        res.statusCode = 500;
+        res.end(JSON.stringify({ code: 1, message: 'Server error' }));
+      }
+    });
+    return;
+  }
+
   // 404 for all other routes
   res.statusCode = 404;
   res.setHeader('Content-Type', 'text/plain;charset=utf-8');
