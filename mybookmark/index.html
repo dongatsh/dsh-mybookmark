@@ -300,6 +300,7 @@
                 lockCard: '锁定卡片',
                 unlockCard: '解锁卡片',
                 confirmLock: '确定要锁定此卡片吗？锁定后只能点击打开网站。',
+                confirmUnlock: '确定要解锁此卡片吗？解锁后可以编辑和拖动卡片。',
                 lockedCardTip: '卡片已锁定'
             },
             en: {
@@ -393,6 +394,7 @@
                 lockCard: 'Lock Card',
                 unlockCard: 'Unlock Card',
                 confirmLock: 'Are you sure to lock this card? After locking, you can only click to open the website.',
+                confirmUnlock: 'Are you sure to unlock this card? After unlocking, you can edit and drag the card.',
                 lockedCardTip: 'Card is locked'
             }
         };
@@ -2170,8 +2172,8 @@
         // 切换卡片锁定状态
         async function toggleLockCard(linkId, lock) {
             try {
-                // 如果是锁定操作，先确认
                 if (lock) {
+                    // 锁定操作，先确认
                     showConfirm(t('confirmLock'), async (confirmed) => {
                         if (!confirmed) return;
                         
@@ -2195,20 +2197,29 @@
                         }
                     });
                 } else {
-                    // 解锁操作，直接执行
-                    const response = await fetch('/api/toggleLock', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ linkId: linkId, tabId: currentTabId, locked: false })
+                    // 解锁操作，也需要确认
+                    showConfirm(t('confirmUnlock'), async (confirmed) => {
+                        if (!confirmed) return;
+                        
+                        try {
+                            const response = await fetch('/api/toggleLock', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ linkId: linkId, tabId: currentTabId, locked: false })
+                            });
+                            
+                            const result = await response.json();
+                            if (result.code === 0) {
+                                showToast(t('unlockCard'), 'success');
+                                loadLinks();
+                            } else {
+                                showToast('解锁失败：' + (result.message || '未知错误'), 'error');
+                            }
+                        } catch (error) {
+                            console.error('Unlock card error:', error);
+                            showToast('解锁失败：' + error.message, 'error');
+                        }
                     });
-                    
-                    const result = await response.json();
-                    if (result.code === 0) {
-                        showToast(t('unlockCard'), 'success');
-                        loadLinks();
-                    } else {
-                        showToast('解锁失败：' + (result.message || '未知错误'), 'error');
-                    }
                 }
             } catch (error) {
                 console.error('Toggle lock error:', error);
