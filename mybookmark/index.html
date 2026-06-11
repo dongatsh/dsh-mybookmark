@@ -1544,6 +1544,17 @@
             document.getElementById('exportModal').style.display = 'none';
         }
 
+        // 格式化日期时间为 yyyyMMddHHmmss
+        function formatDateTime(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${year}${month}${day}${hours}${minutes}${seconds}`;
+        }
+
         // 确认导出
         async function confirmExport() {
             const scope = document.getElementById('exportScopeSelect').value;
@@ -1567,7 +1578,7 @@
                             copyright: configData.copyright
                         }
                     };
-                    filename = `mybookmark_full_backup_${new Date().getTime()}.json`;
+                    filename = `mybookmark_full_backup_${formatDateTime(new Date())}.json`;
                 } else {
                     // 导出单个选项卡
                     const tabId = scope; // Tab ID 可能是字符串或数字
@@ -1582,7 +1593,7 @@
                     exportData = {
                         tabs: [selectedTab]
                     };
-                    filename = `mybookmark_${selectedTab.name}_${new Date().getTime()}.json`;
+                    filename = `mybookmark_${selectedTab.name}_${formatDateTime(new Date())}.json`;
                 }
                 
                 // 创建JSON文件
