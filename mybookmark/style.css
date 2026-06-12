@@ -139,6 +139,8 @@ button:hover {background: #3182ce;}
 /* 所有卡片默认隐藏按钮区域 */
 .link-card .card-actions {opacity: 0;visibility: hidden;transition: opacity 0.3s, visibility 0.3s;position: absolute;bottom: -50px;left: 0;right: 0;background: rgba(255,255,255,0.95);padding: 10px;border-radius: 0 0 10px 10px;box-shadow: 0 4px 12px rgba(0,0,0,0.1);}
 .link-card:hover .card-actions {opacity: 1;visibility: visible;}
+/* 锁定卡片不显示按钮区域 */
+.link-card.locked .card-actions {display: none !important;}
 /* 移动按钮 - 右上角小图标 */
 .move-btn-icon {position: absolute;top: 8px;right: 40px;width: 24px;height: 24px;padding: 0;background: #805ad5;color: #fff;border: none;border-radius: 50%;cursor: pointer;font-size: 12px;display: flex;align-items: center;justify-content: center;transition: all 0.3s;z-index: 10;opacity: 0;}
 .link-card:hover .move-btn-icon {opacity: 1;}
@@ -252,8 +254,6 @@ button:hover {background: #3182ce;}
     align-items: center;
     justify-content: center;
 }
-.open-btn {background: #38a169;}
-.open-btn:hover {background: #2f855a;}
 .edit-btn {background: #4299e1;}
 .edit-btn:hover {background: #3182ce;}
 .del-btn {background: #e53e3e;}

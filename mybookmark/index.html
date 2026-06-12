@@ -575,7 +575,7 @@
                         ${!isLocked ? `<button class="move-btn-icon" onclick="showMoveToTabModal('${item.id}')" title="${t('moveToOtherTab')}">⇄</button>` : ''}
                         ${!isLocked ? `<button class="lock-btn-icon" onclick="toggleLockCard('${item.id}', true)" title="${t('lockCard')}">🔓</button>` : ''}
                         ${isLocked ? `<button class="unlock-btn-icon" onclick="toggleLockCard('${item.id}', false)" title="${t('unlockCard')}">🔒</button>` : ''}
-                        <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center;">
+                        <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center; cursor: pointer;" onclick="window.open('${item.url}','_blank')" title="${item.name}">
                             <img src="${favicon}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
                         </div>
                         <div class="card-content">
@@ -585,13 +585,10 @@
                         </div>
                         <div class="card-actions">
                             ${!isLocked ? `
-                            <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')" title="${t('openButton')}">🔗</button>
                             <button class="card-btn edit-btn" onclick="openEditModal('${item.id}')" title="${t('editButton')}">✏️</button>
                             <button class="card-btn del-btn" onclick="delLink('${item.id}')" title="${t('deleteButton')}">🗑️</button>
                             <button class="card-btn refresh-btn" onclick="refreshFavicon('${item.id}')" title="${t('refreshIcon')}">⟳</button>
-                            ` : `
-                            <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')" title="${t('openButton')}">🔗</button>
-                            `}
+                            ` : ''}
                         </div>
                     </div>`;
                 } else {
@@ -605,7 +602,7 @@
                         ${!isLocked ? `<button class="move-btn-icon" onclick="showMoveToTabModal('${item.id}')" title="${t('moveToOtherTab')}">⇄</button>` : ''}
                         ${!isLocked ? `<button class="lock-btn-icon" onclick="toggleLockCard('${item.id}', true)" title="${t('lockCard')}">🔓</button>` : ''}
                         ${isLocked ? `<button class="unlock-btn-icon" onclick="toggleLockCard('${item.id}', false)" title="${t('unlockCard')}">🔒</button>` : ''}
-                        <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center;">
+                        <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center; cursor: pointer;" onclick="window.open('${item.url}','_blank')" title="${item.name}">
                             <img src="${favicon}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
                         </div>
                         <div class="link-name">${item.name}</div>
@@ -613,13 +610,10 @@
                         ${item.note ? `<div class="link-note">${item.note}</div>` : ''}
                         <div class="card-actions">
                             ${!isLocked ? `
-                            <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')" title="${t('openButton')}">🔗</button>
                             <button class="card-btn edit-btn" onclick="openEditModal('${item.id}')" title="${t('editButton')}">✏️</button>
                             <button class="card-btn del-btn" onclick="delLink('${item.id}')" title="${t('deleteButton')}">🗑️</button>
                             <button class="card-btn refresh-btn" onclick="refreshFavicon('${item.id}')" title="${t('refreshIcon')}">⟳</button>
-                            ` : `
-                            <button class="card-btn open-btn" onclick="window.open('${item.url}','_blank')" title="${t('openButton')}">🔗</button>
-                            `}
+                            ` : ''}
                         </div>
                     </div>`;
                 }
