@@ -442,7 +442,8 @@
             if (langZh) langZh.classList.toggle('active', currentLanguage === 'zh');
             if (langEn) langEn.classList.toggle('active', currentLanguage === 'en');
             
-            // 重新加载页面以应用所有更改
+            // 重新加载标题、链接和标签页以应用语言设置
+            loadTitle();
             loadLinks();
             loadTabs();
         }
@@ -583,13 +584,13 @@
                             <div class="link-url"><a href="${item.url}" target="_blank">${item.url}</a></div>
                             ${item.note ? `<div class="link-note">${item.note}</div>` : ''}
                         </div>
+                        ${!isLocked ? `
                         <div class="card-actions">
-                            ${!isLocked ? `
                             <button class="card-btn edit-btn" onclick="openEditModal('${item.id}')" title="${t('editButton')}">✏️</button>
                             <button class="card-btn del-btn" onclick="delLink('${item.id}')" title="${t('deleteButton')}">🗑️</button>
                             <button class="card-btn refresh-btn" onclick="refreshFavicon('${item.id}')" title="${t('refreshIcon')}">⟳</button>
-                            ` : ''}
                         </div>
+                        ` : ''}
                     </div>`;
                 } else {
                     // 大/中图标模式：纵向布局
@@ -608,13 +609,13 @@
                         <div class="link-name">${item.name}</div>
                         <div class="link-url"><a href="${item.url}" target="_blank">${item.url}</a></div>
                         ${item.note ? `<div class="link-note">${item.note}</div>` : ''}
+                        ${!isLocked ? `
                         <div class="card-actions">
-                            ${!isLocked ? `
                             <button class="card-btn edit-btn" onclick="openEditModal('${item.id}')" title="${t('editButton')}">✏️</button>
                             <button class="card-btn del-btn" onclick="delLink('${item.id}')" title="${t('deleteButton')}">🗑️</button>
                             <button class="card-btn refresh-btn" onclick="refreshFavicon('${item.id}')" title="${t('refreshIcon')}">⟳</button>
-                            ` : ''}
                         </div>
+                        ` : ''}
                     </div>`;
                 }
             });
@@ -1363,13 +1364,23 @@
             try {
                 const res = await fetch('/api/get');
                 const data = await res.json();
+                console.log('loadTitle - API response:', { title: data.title, customTitle: data.customTitle });
                 if (data.title) {
-                    // 如果标题是默认值，根据当前语言显示
+                    // 如果用户已自定义标题（customTitle === true），直接使用保存的标题，不进行语言切换
                     let displayTitle = data.title;
-                    if (data.title === '我的收藏夹' && currentLanguage === 'en') {
-                        displayTitle = t('defaultTitle');
-                    } else if (data.title === 'My Bookmark' && currentLanguage === 'zh') {
-                        displayTitle = t('defaultTitle');
+                    console.log('loadTitle - customTitle check:', data.customTitle);
+                    if (!data.customTitle) {
+                        // 只有未自定义时，才根据语言自动切换默认标题
+                        console.log('loadTitle - Auto-switching title based on language');
+                        if (data.title === '我的收藏夹' && currentLanguage === 'en') {
+                            displayTitle = t('defaultTitle');
+                            console.log('loadTitle - Switched to English:', displayTitle);
+                        } else if (data.title === 'My Bookmark' && currentLanguage === 'zh') {
+                            displayTitle = t('defaultTitle');
+                            console.log('loadTitle - Switched to Chinese:', displayTitle);
+                        }
+                    } else {
+                        console.log('loadTitle - Using custom title (no auto-switch):', displayTitle);
                     }
                     const toolbarTitleEl = document.getElementById('toolbarTitle');
                     if (toolbarTitleEl) {
@@ -1377,6 +1388,7 @@
                     }
                     // 同时更新页面 title 标签
                     document.title = displayTitle;
+                    console.log('loadTitle - Final title set to:', displayTitle);
                 }
             } catch (error) {
                 console.error('Load title error:', error);

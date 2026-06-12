@@ -934,6 +934,7 @@ const server = http.createServer((req, res) => {
     // 返回所有tabs，前端根据localStorage中的currentTabId决定显示哪个
     const response = {
       title: data.title,
+      customTitle: data.customTitle || false, // 返回自定义标题标记
       tabs: data.tabs
     };
     res.end(JSON.stringify(response));
@@ -1175,8 +1176,10 @@ const server = http.createServer((req, res) => {
         debugLog('Updating title to:', title);
         const data = readData();
         data.title = title;
+        // 标记为用户自定义标题，切换语言时不自动翻译
+        data.customTitle = true;
         writeData(data);
-        debugLog('Title updated successfully');
+        debugLog('Title updated successfully with customTitle flag');
         res.end(JSON.stringify({ code: 0 }));
       } catch (err) {
         logError('Update title error:', err);
