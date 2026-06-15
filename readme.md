@@ -14,7 +14,9 @@
 
 * node.js 最低版本 v8.x 或者更高，推荐 v12.x LTS 或更高版本
 
-## 安装和运行
+## 手动安装和运行
+
+手动安装的方式：
 
 * 搭建 node 环境
 
@@ -23,6 +25,12 @@
 * Windows 下点击 start.bat 即可运行
 
 * 更多安装和运行信息参见 [安装和运行](doc/install.md)
+
+## 自动安装和运行
+
+Windows 环境下，可以通过 MyBookmarkApp 服务管理程序，进行自动安装和运行：
+
+* 参见 [MyBookmarkApp](https://gitee.com/dongatsh/dsh-mybookmark-app)
 
 
 ## 默认地址
