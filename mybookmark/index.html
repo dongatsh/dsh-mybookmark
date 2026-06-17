@@ -156,6 +156,9 @@
                     <button onclick="setImportMethod('paste')" id="importMethodPasteBtn" style="flex: 1;padding: 10px;background: #e2e8f0;color: #4a5568;border: none;border-radius: 6px;cursor: pointer;font-size: 14px;transition: all 0.3s;">
                         <span data-i18n="importFromText">📋 输入内容</span>
                     </button>
+                    <button onclick="setImportMethod('classic')" id="importMethodClassicBtn" style="flex: 1;padding: 10px;background: #e2e8f0;color: #4a5568;border: none;border-radius: 6px;cursor: pointer;font-size: 14px;transition: all 0.3s;">
+                        <span data-i18n="classicBookmarks">🌟 经典收藏</span>
+                    </button>
                 </div>
             </div>
             
@@ -211,10 +214,25 @@
                 </div>
             </div>
             
-            <!-- Tab selection for Chrome import (hidden by default) -->
-            <div id="chromeImportTabSection" style="display: none;margin-bottom: 20px;">
+            <!-- Classic Bookmarks Section -->
+            <div id="classicImportSection" style="display: none;">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="selectCategoryLabel">选择主题分类：</label>
+                    <select class="modal-input" id="classicCategorySelect" onchange="loadClassicBookmarks()">
+                        <option value="" data-i18n="loadingCategories">加载中...</option>
+                    </select>
+                </div>
+                <div id="classicPreviewSection" style="display: none;margin-bottom: 20px;">
+                    <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="previewContentLabel">预览内容：</label>
+                    <div id="classicPreviewContent" style="max-height: 200px;overflow-y: auto;padding: 12px;background: #f7fafc;border-radius: 6px;font-size: 13px;color: #4a5568;">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Unified Tab selection for all import methods (hidden by default) -->
+            <div id="unifiedImportTabSection" style="display: none;margin-bottom: 20px;">
                 <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="selectTabForImport">请选择要导入到的选项卡：</label>
-                <select class="modal-input" id="chromeImportTabSelect"></select>
+                <select class="modal-input" id="unifiedImportTabSelect"></select>
             </div>
             
             <div class="modal-buttons">
@@ -405,6 +423,13 @@
                 importMethodLabel: '选择导入方式：',
                 importFromFile: '📁 从文件导入',
                 importFromText: '📋 输入内容',
+                classicBookmarks: '🌟 经典收藏',
+                selectCategoryLabel: '选择主题分类：',
+                loadingCategories: '加载中...',
+                selectCategoryPlaceholder: '请选择主题分类',
+                loadFailed: '加载失败',
+                previewContentLabel: '预览内容：',
+                loadingDots: '加载中...',
                 pasteContentLabel: '粘贴内容：',
                 pasteContentPlaceholder: '请在此处粘贴 JSON 或 HTML 内容...',
                 selectContentType: '选择内容类型：',
@@ -526,6 +551,13 @@
                 importMethodLabel: 'Select Import Method:',
                 importFromFile: '📁 Import from File',
                 importFromText: '📋 Input Content',
+                classicBookmarks: '🌟 Classic Bookmarks',
+                selectCategoryLabel: 'Select Category:',
+                loadingCategories: 'Loading...',
+                selectCategoryPlaceholder: 'Please select a category',
+                loadFailed: 'Load failed',
+                previewContentLabel: 'Preview:',
+                loadingDots: 'Loading...',
                 pasteContentLabel: 'Paste Content:',
                 pasteContentPlaceholder: 'Please paste JSON or HTML content here...',
                 selectContentType: 'Select Content Type:',
@@ -2143,34 +2175,72 @@
             
             const fileBtn = document.getElementById('importMethodFileBtn');
             const pasteBtn = document.getElementById('importMethodPasteBtn');
+            const classicBtn = document.getElementById('importMethodClassicBtn');
             const fileSection = document.getElementById('fileImportSection');
             const pasteSection = document.getElementById('pasteImportSection');
+            const classicSection = document.getElementById('classicImportSection');
+            
+            // 重置所有按钮样式
+            fileBtn.style.background = '#e2e8f0';
+            fileBtn.style.color = '#4a5568';
+            pasteBtn.style.background = '#e2e8f0';
+            pasteBtn.style.color = '#4a5568';
+            classicBtn.style.background = '#e2e8f0';
+            classicBtn.style.color = '#4a5568';
+            
+            // 隐藏所有区域
+            fileSection.style.display = 'none';
+            pasteSection.style.display = 'none';
+            classicSection.style.display = 'none';
             
             if (method === 'file') {
                 // 显示文件导入区域
                 fileBtn.style.background = '#4299e1';
                 fileBtn.style.color = 'white';
-                pasteBtn.style.background = '#e2e8f0';
-                pasteBtn.style.color = '#4a5568';
                 fileSection.style.display = 'block';
-                pasteSection.style.display = 'none';
+                
+                // 重置为第一个导入类型（mybookmark）
+                document.querySelector('input[name="importType"][value="mybookmark"]').checked = true;
+                
+                // 隐藏选项卡选择框
+                document.getElementById('unifiedImportTabSection').style.display = 'none';
                 
                 // 重置粘贴内容
                 document.getElementById('pasteContentArea').value = '';
                 document.getElementById('pasteContentPreview').style.display = 'none';
-            } else {
+            } else if (method === 'paste') {
                 // 显示粘贴内容区域
-                fileBtn.style.background = '#e2e8f0';
-                fileBtn.style.color = '#4a5568';
                 pasteBtn.style.background = '#4299e1';
                 pasteBtn.style.color = 'white';
-                fileSection.style.display = 'none';
                 pasteSection.style.display = 'block';
+                
+                // 重置为第一个内容类型（mybookmark）
+                document.querySelector('input[name="pasteType"][value="mybookmark"]').checked = true;
+                
+                // 隐藏选项卡选择框
+                document.getElementById('unifiedImportTabSection').style.display = 'none';
                 
                 // 重置文件选择
                 pendingImportFile = null;
                 document.getElementById('importFile').value = '';
                 document.getElementById('selectedFileName').style.display = 'none';
+            } else if (method === 'classic') {
+                // 显示经典收藏区域
+                classicBtn.style.background = '#4299e1';
+                classicBtn.style.color = 'white';
+                classicSection.style.display = 'block';
+                
+                // 隐藏选项卡选择框
+                document.getElementById('unifiedImportTabSection').style.display = 'none';
+                
+                // 重置分类选择
+                document.getElementById('classicCategorySelect').value = '';
+                
+                // 隐藏预览区域
+                document.getElementById('classicPreviewSection').style.display = 'none';
+                
+                // 加载主题分类列表
+                loadClassicCategories();
             }
             
             // 禁用开始导入按钮，等待用户操作
@@ -2182,8 +2252,66 @@
         
         // 处理粘贴类型变化
         function onPasteTypeChange() {
+            const pasteType = document.querySelector('input[name="pasteType"]:checked').value;
+            const tabSection = document.getElementById('unifiedImportTabSection');
+            
+            if (pasteType === 'chrome') {
+                // 如果选择了 Chrome/Edge 书签，显示选项卡选择框
+                loadUnifiedImportTabSelect();
+            } else {
+                // 否则隐藏选项卡选择框
+                tabSection.style.display = 'none';
+            }
+            
             // 检查是否有内容
             checkPasteContent();
+        }
+        
+        // 加载统一的导入选项卡选择列表
+        async function loadUnifiedImportTabSelect() {
+            const select = document.getElementById('unifiedImportTabSelect');
+            const tabSection = document.getElementById('unifiedImportTabSection');
+            const startBtn = document.getElementById('startImportBtn');
+            
+            try {
+                const res = await fetch('/api/get');
+                const data = await res.json();
+                const tabs = data.tabs || [];
+                
+                if (tabs.length === 0) {
+                    showToast('没有可用的选项卡', 'error');
+                    tabSection.style.display = 'none';
+                    startBtn.disabled = true;
+                    startBtn.style.opacity = '0.5';
+                    startBtn.style.cursor = 'not-allowed';
+                    return;
+                }
+                
+                // 填充选项卡列表
+                select.innerHTML = '';
+                tabs.forEach(tab => {
+                    const option = document.createElement('option');
+                    option.value = tab.id;
+                    const siteCount = tab.links ? tab.links.length : 0;
+                    option.textContent = `${tab.name} (${siteCount} ${t('sitesCount')})`;
+                    select.appendChild(option);
+                });
+                
+                // 显示选项卡选择区域
+                tabSection.style.display = 'block';
+                
+                // 启用开始导入按钮
+                startBtn.disabled = false;
+                startBtn.style.opacity = '1';
+                startBtn.style.cursor = 'pointer';
+            } catch (error) {
+                console.error('Load tabs for unified import error:', error);
+                showToast('加载选项卡失败', 'error');
+                tabSection.style.display = 'none';
+                startBtn.disabled = true;
+                startBtn.style.opacity = '0.5';
+                startBtn.style.cursor = 'not-allowed';
+            }
         }
         
         // 检查粘贴内容
@@ -2330,7 +2458,7 @@
             // 重置选项
             document.querySelector('input[name="importType"][value="mybookmark"]').checked = true;
             document.querySelector('input[name="pasteType"][value="mybookmark"]').checked = true;
-            document.getElementById('chromeImportTabSection').style.display = 'none';
+            document.getElementById('unifiedImportTabSection').style.display = 'none';
             
             // 重置文件选择
             pendingImportFile = null;
@@ -2378,7 +2506,8 @@
                 const data = await res.json();
                 const tabs = data.tabs || [];
                 
-                const select = document.getElementById('chromeImportTabSelect');
+                const select = document.getElementById('unifiedImportTabSelect');
+                const tabSection = document.getElementById('unifiedImportTabSection');
                 select.innerHTML = '';
                 
                 tabs.forEach(tab => {
@@ -2387,6 +2516,12 @@
                     option.textContent = `${tab.name} (${tab.links ? tab.links.length : 0}${t('sitesCount')})`;
                     select.appendChild(option);
                 });
+                
+                // 如果当前是 Chrome 类型，显示选项卡选择区域
+                const importType = document.querySelector('input[name="importType"]:checked').value;
+                if (importType === 'chrome') {
+                    tabSection.style.display = 'block';
+                }
             } catch (error) {
                 console.error('Failed to load tabs:', error);
             }
@@ -2395,7 +2530,7 @@
         // 导入类型改变时的处理
         function onImportTypeChange() {
             const importType = document.querySelector('input[name="importType"]:checked').value;
-            const chromeSection = document.getElementById('chromeImportTabSection');
+            const chromeSection = document.getElementById('unifiedImportTabSection');
             const fileInput = document.getElementById('importFile');
             
             if (importType === 'chrome') {
@@ -2424,6 +2559,81 @@
         
         // 开始导入流程
         async function startImportProcess() {
+            if (currentImportMethod === 'classic') {
+                // 经典收藏导入
+                if (!window.classicImportData) {
+                    showToast('请先选择主题分类', 'error');
+                    return;
+                }
+                
+                const data = window.classicImportData;
+                const targetTabId = document.getElementById('unifiedImportTabSelect').value;
+                
+                if (!targetTabId) {
+                    showToast('请选择要导入到的选项卡', 'error');
+                    return;
+                }
+                
+                // 提取所有的 links
+                let allLinks = [];
+                if (data.tabs && Array.isArray(data.tabs)) {
+                    data.tabs.forEach(tab => {
+                        if (tab.links && Array.isArray(tab.links)) {
+                            allLinks = allLinks.concat(tab.links);
+                        }
+                    });
+                }
+                
+                if (allLinks.length === 0) {
+                    showToast('该主题下没有可导入的书签', 'error');
+                    return;
+                }
+                
+                // 确认导入
+                customConfirm(`${t('confirmImport')} ${allLinks.length} ${t('bookmarks')}？${t('willMergeWithExisting')}`, async (confirmed) => {
+                    if (!confirmed) {
+                        return;
+                    }
+                    
+                    // 关闭导入对话框
+                    closeImportTypeModal();
+                    
+                    // 调用后端 API 导入数据到指定选项卡
+                    try {
+                        const response = await fetch('/api/importToTab', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                tabId: targetTabId,
+                                links: allLinks
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        if (result.code === 0) {
+                            let message = t('importSuccess');
+                            if (result.added !== undefined && result.skipped !== undefined) {
+                                message = t('importComplete') + result.added + t('skipDuplicate') + result.skipped + ' ';
+                            } else if (result.message) {
+                                message = result.message;
+                            }
+                            showToast(message, 'success');
+                            // 重新加载整个页面数据（包括tabs和links）
+                            await loadTabs();
+                            await loadLinks();
+                        } else {
+                            showToast(t('importFailed') + (result.message || t('unknownError')), 'error');
+                        }
+                    } catch (error) {
+                        console.error('Import error:', error);
+                        showToast(t('importFailed') + error.message, 'error');
+                    }
+                });
+                return;
+            }
+            
             const importType = currentImportMethod === 'file' 
                 ? document.querySelector('input[name="importType"]:checked').value
                 : document.querySelector('input[name="pasteType"]:checked').value;
@@ -2466,7 +2676,8 @@
                 await importMyBookmarkDataFromString(dataRef);
             } else if (importType === 'chrome') {
                 // 使用 Chrome/Edge 导入逻辑
-                const targetTabId = document.getElementById('chromeImportTabSelect').value;
+                const targetTabId = document.getElementById('unifiedImportTabSelect').value;
+                
                 if (!targetTabId) {
                     showToast(t('selectTabForImport'), 'error');
                     return;
@@ -3183,6 +3394,94 @@
         window.customPrompt = function(title, defaultValue, callback) {
             showPrompt(title, defaultValue, callback);
         };
+        
+        // 加载经典收藏分类列表
+        async function loadClassicCategories() {
+            const select = document.getElementById('classicCategorySelect');
+            select.innerHTML = `<option value="">${t('loadingDots')}</option>`;
+            
+            try {
+                const response = await fetch('https://mb.ostour.cn/api/siteCategories/open?filter=AI');
+                const result = await response.json();
+                
+                if (result.code === 0 && result.data && result.data.length > 0) {
+                    select.innerHTML = `<option value="">${t('selectCategoryPlaceholder')}</option>`;
+                    result.data.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.id;
+                        option.textContent = category.categoryName;
+                        select.appendChild(option);
+                    });
+                } else {
+                    select.innerHTML = `<option value="">${t('loadFailed')}</option>`;
+                    showToast(t('loadFailed'), 'error');
+                }
+            } catch (error) {
+                console.error('Load classic categories error:', error);
+                select.innerHTML = `<option value="">${t('loadFailed')}</option>`;
+                showToast(t('loadFailed') + '：' + error.message, 'error');
+            }
+        }
+        
+        // 加载经典收藏内容
+        async function loadClassicBookmarks() {
+            const categoryId = document.getElementById('classicCategorySelect').value;
+            const previewSection = document.getElementById('classicPreviewSection');
+            const previewContent = document.getElementById('classicPreviewContent');
+            const tabSelectSection = document.getElementById('unifiedImportTabSection');
+            const startBtn = document.getElementById('startImportBtn');
+            
+            if (!categoryId) {
+                previewSection.style.display = 'none';
+                tabSelectSection.style.display = 'none';
+                startBtn.disabled = true;
+                startBtn.style.opacity = '0.5';
+                startBtn.style.cursor = 'not-allowed';
+                return;
+            }
+            
+            previewContent.innerHTML = `<div style="text-align: center;color: #718096;">${t('loadingDots')}</div>`;
+            previewSection.style.display = 'block';
+            tabSelectSection.style.display = 'none';
+            
+            try {
+                const response = await fetch(`https://mb.ostour.cn/api/siteInfo/${categoryId}/open`);
+                const result = await response.json();
+                
+                if (result.code === 0 && result.data) {
+                    // 解析 JSON 字符串
+                    const data = JSON.parse(result.data);
+                    
+                    // 显示预览
+                    let previewHTML = '';
+                    if (data.tabs && data.tabs.length > 0) {
+                        data.tabs.forEach(tab => {
+                            const siteCount = tab.links ? tab.links.length : 0;
+                            previewHTML += `<div style="margin-bottom: 10px;"><strong>${tab.name}</strong> (${siteCount} ${t('sitesCount')})</div>`;
+                            if (tab.links && tab.links.length > 0) {
+                                tab.links.forEach(link => {
+                                    previewHTML += `<div style="margin-left: 20px;font-size: 12px;color: #4a5568;">• ${link.name}</div>`;
+                                });
+                            }
+                        });
+                    }
+                    previewContent.innerHTML = previewHTML;
+                    
+                    // 加载选项卡列表
+                    await loadUnifiedImportTabSelect();
+                    
+                    // 保存数据供导入使用
+                    window.classicImportData = data;
+                } else {
+                    previewContent.innerHTML = `<div style="text-align: center;color: #e53e3e;">${t('loadFailed')}</div>`;
+                    showToast(t('loadFailed'), 'error');
+                }
+            } catch (error) {
+                console.error('Load classic bookmarks error:', error);
+                previewContent.innerHTML = `<div style="text-align: center;color: #e53e3e;">${t('loadFailed')}</div>`;
+                showToast(t('loadFailed') + '：' + error.message, 'error');
+            }
+        }
     </script>
     
     <!-- Footer -->

@@ -1317,7 +1317,7 @@ const server = http.createServer((req, res) => {
           }
           
           // 获取当前tab已有的 ID 列表（用于去重）
-          const existingIds = new Set(currentTab.links.map(link => link.id));
+          const existingIds = new Set(targetTab.links.map(link => link.id));
           
           // 过滤掉已存在的 ID，只保留新的
           const newLinks = [];
@@ -1345,6 +1345,65 @@ const server = http.createServer((req, res) => {
         }
       } catch (err) {
         logError('Import error:', err);
+        res.statusCode = 500;
+        res.end(JSON.stringify({ code: 1, message: 'Server error' }));
+      }
+    });
+    return;
+  }
+
+  // 导入数据到指定选项卡
+  if (pathname === '/api/importToTab' && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json;charset=utf-8');
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const { tabId, links } = JSON.parse(body);
+        debugLog(`Importing ${links.length} links to tab ${tabId}...`);
+        
+        if (!tabId || !links || !Array.isArray(links)) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ code: 1, message: 'Invalid parameters' }));
+          return;
+        }
+        
+        const currentData = readData();
+        
+        // 查找目标选项卡
+        const targetTab = currentData.tabs.find(t => t.id === tabId);
+        if (!targetTab) {
+          res.statusCode = 404;
+          res.end(JSON.stringify({ code: 1, message: 'Tab not found' }));
+          return;
+        }
+        
+        // 获取当前tab已有的 ID 列表（用于去重）
+        const existingIds = new Set(targetTab.links.map(link => link.id));
+        
+        // 过滤掉已存在的 ID，只保留新的
+        const newLinks = [];
+        let duplicateCount = 0;
+        
+        links.forEach(link => {
+          if (!existingIds.has(link.id)) {
+            newLinks.push(link);
+            existingIds.add(link.id);
+          } else {
+            duplicateCount++;
+          }
+        });
+        
+        debugLog(`Adding ${newLinks.length} new links, skipping ${duplicateCount} duplicates`);
+        
+        // 将新链接添加到目标tab
+        targetTab.links = [...targetTab.links, ...newLinks];
+        writeData(currentData);
+        
+        debugLog('Links imported to tab successfully');
+        res.end(JSON.stringify({ code: 0, added: newLinks.length, skipped: duplicateCount }));
+      } catch (err) {
+        logError('Import to tab error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }
