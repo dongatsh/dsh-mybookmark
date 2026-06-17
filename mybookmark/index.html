@@ -267,16 +267,16 @@
             <!-- Text Export Section -->
             <div id="textExportSection" style="display: none;">
                 <div style="margin-bottom: 15px;">
-                    <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;">选择导出范围：</label>
+                    <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" data-i18n="exportScopeLabel">选择导出范围：</label>
                     <select class="modal-input" id="exportScopeSelectText" onchange="updateTextExportFormatOptions()">
                         <option value="all" data-i18n="exportAllOption">全部数据（包含所有选项卡和标题）</option>
                     </select>
                 </div>
                 <div style="margin-bottom: 15px;">
-                    <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;">选择导出格式：</label>
+                    <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" data-i18n="exportFormatLabel">选择导出格式：</label>
                     <select class="modal-input" id="exportFormatSelectText" onchange="generateExportContent()">
-                        <option value="json">我的收藏夹导出文件 (JSON)</option>
-                        <option value="html" disabled>Chrome书签 (HTML)</option>
+                        <option value="json" data-i18n="exportMyBookmarkFormat">我的收藏夹导出文件 (JSON)</option>
+                        <option value="html" data-i18n="exportChromeFormat" disabled>Chrome书签 (HTML)</option>
                     </select>
                 </div>
                 <div style="margin-bottom: 15px;">
@@ -438,7 +438,7 @@
                 importData: 'Import',
                 importTypeLabel: 'Select Import Type:',
                 importMyBookmark: 'My Bookmark Export File',
-                importChromeEdge: 'Chrome/Edge Export File',
+                importChromeEdge: 'Chrome/Edge Bookmarks File',
                 selectTabForImport: 'Please select the tab to import to:',
                 startImport: 'Start Import',
                 selectFileLabel: 'Select File:',
