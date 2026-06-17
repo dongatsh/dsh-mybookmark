@@ -252,7 +252,7 @@
                 </div>
                 <div style="margin-bottom: 15px;">
                     <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" data-i18n="exportFormatLabel">选择导出格式：</label>
-                    <select class="modal-input" id="exportFormatSelect">
+                    <select class="modal-input" id="exportFormatSelect" onchange="updateExportFormatOptions()">
                         <option value="json" data-i18n="exportMyBookmarkFormat">我的收藏夹导出文件 (JSON)</option>
                         <option value="html" data-i18n="exportChromeFormat" disabled>Chrome书签 (HTML)</option>
                     </select>
@@ -1702,12 +1702,15 @@
                     selectText.appendChild(option);
                 });
                 
-                // 重置格式选择为 JSON
+                // 设置两个下拉框为共享的状态
+                select.value = exportScope;
+                selectText.value = exportScope;
+                
                 const formatSelect = document.getElementById('exportFormatSelect');
-                formatSelect.value = 'json';
+                formatSelect.value = exportFormat;
                 
                 const formatSelectText = document.getElementById('exportFormatSelectText');
-                formatSelectText.value = 'json';
+                formatSelectText.value = exportFormat;
                 
                 // 初始化格式选项状态
                 updateExportFormatOptions();
@@ -1770,10 +1773,24 @@
             const formatSelect = document.getElementById('exportFormatSelectText');
             const htmlOption = formatSelect.querySelector('option[value="html"]');
             
+            // 更新共享状态
+            exportScope = scope;
+            exportFormat = formatSelect.value;
+            
+            // 同步到文件导出模式
+            const fileScopeSelect = document.getElementById('exportScopeSelect');
+            const fileFormatSelect = document.getElementById('exportFormatSelect');
+            if (fileScopeSelect.querySelector(`option[value="${scope}"]`)) {
+                fileScopeSelect.value = scope;
+            }
+            fileFormatSelect.value = formatSelect.value;
+            
             if (scope === 'all') {
                 // 选择全部数据时，禁用 HTML 格式
                 htmlOption.disabled = true;
                 formatSelect.value = 'json';
+                fileFormatSelect.value = 'json';
+                exportFormat = 'json';
             } else {
                 // 选择单个选项卡时，启用 HTML 格式
                 htmlOption.disabled = false;
@@ -1906,10 +1923,24 @@
             const htmlOption = formatSelect.querySelector('option[value="html"]');
             const tipText = document.getElementById('exportTipText');
             
+            // 更新共享状态
+            exportScope = scope;
+            exportFormat = formatSelect.value;
+            
+            // 同步到文本导出模式
+            const textScopeSelect = document.getElementById('exportScopeSelectText');
+            const textFormatSelect = document.getElementById('exportFormatSelectText');
+            if (textScopeSelect.querySelector(`option[value="${scope}"]`)) {
+                textScopeSelect.value = scope;
+            }
+            textFormatSelect.value = formatSelect.value;
+            
             if (scope === 'all') {
                 // 选择全部数据时，禁用 HTML 格式
                 htmlOption.disabled = true;
                 formatSelect.value = 'json';
+                textFormatSelect.value = 'json';
+                exportFormat = 'json';
                 tipText.textContent = t('exportTip');
             } else {
                 // 选择单个选项卡时，启用 HTML 格式
@@ -2102,6 +2133,10 @@
         // 当前导出方式 ('file' 或 'text')
         let currentExportMethod = 'file';
         
+        // 共享的导出状态
+        let exportScope = 'all';
+        let exportFormat = 'json';
+        
         // 设置导入方式
         function setImportMethod(method) {
             currentImportMethod = method;
@@ -2176,15 +2211,26 @@
                 // 校验 JSON 格式
                 try {
                     const parsed = JSON.parse(content);
-                    // 进一步验证数据结构
+                    
+                    // 检查是否有 tabs 数组（必需）
                     if (!parsed.tabs || !Array.isArray(parsed.tabs)) {
                         errorMsg = t('jsonFormatErrorMissingTabs');
                         isValid = false;
+                    } else if (parsed.tabs.length === 0) {
+                        // 允许空的 tabs 数组
+                        isValid = true;
                     } else {
-                        // 验证每个选项卡是否有必要的字段
-                        const hasValidStructure = parsed.tabs.every(tab => 
-                            tab.id && tab.name && Array.isArray(tab.links)
-                        );
+                        // 验证每个选项卡的基本结构
+                        // id 和 name 是必需的，links 可以是空数组或不存在
+                        const hasValidStructure = parsed.tabs.every(tab => {
+                            // id 和 name 必须存在且不为空
+                            const hasId = tab.id && typeof tab.id !== 'undefined';
+                            const hasName = tab.name && typeof tab.name === 'string';
+                            // links 可以是数组、空数组或不存在
+                            const linksValid = !tab.links || Array.isArray(tab.links);
+                            return hasId && hasName && linksValid;
+                        });
+                        
                         if (!hasValidStructure) {
                             errorMsg = t('jsonFormatErrorIncompleteStructure');
                             isValid = false;
@@ -2412,8 +2458,8 @@
             // 保存数据引用，因为 closeImportTypeModal 会清空
             const dataRef = dataToImport;
             
-            // 先关闭对话框
-            closeImportTypeModal();
+            // 不要在这里关闭对话框，让导入函数自己决定何时关闭
+            // closeImportTypeModal();
             
             if (importType === 'mybookmark') {
                 // 使用原有的导入逻辑
@@ -2445,16 +2491,92 @@
                 const data = JSON.parse(jsonString);
                 
                 // 验证数据结构
-                if (!data.tabs || !Array.isArray(data.tabs)) {
-                    showToast(t('invalidFileFormat'), 'error');
-                    return;
+                if (!data.tabs) {
+                    showToast(t('jsonFormatErrorMissingTabs'), 'error');
+                    return; // 失败时不关闭窗口
                 }
                 
-                // 调用原有的导入函数
-                await processImportedData(data);
+                if (!Array.isArray(data.tabs)) {
+                    showToast(t('jsonFormatErrorMissingTabs'), 'error');
+                    return; // 失败时不关闭窗口
+                }
+                
+                // 计算要导入的项目数量
+                let itemCount = 0;
+                if (data.tabs && Array.isArray(data.tabs)) {
+                    data.tabs.forEach(tab => {
+                        if (tab.links && Array.isArray(tab.links)) {
+                            itemCount += tab.links.length;
+                        }
+                    });
+                }
+                
+                if (itemCount === 0) {
+                    showToast('文件中没有找到可导入的书签', 'error');
+                    return; // 失败时不关闭窗口
+                }
+                
+                // 确认导入
+                customConfirm(`${t('confirmImport')} ${itemCount} ${t('bookmarks')}？${t('willMergeWithExisting')}`, async (confirmed) => {
+                    if (!confirmed) {
+                        // 用户取消，不关闭窗口，让用户可以继续操作
+                        return;
+                    }
+                    
+                    // 用户确认后，关闭导入对话框
+                    closeImportTypeModal();
+                    
+                    // 如果包含 config，先保存配置
+                    if (data.config) {
+                        try {
+                            await fetch('/api/saveConfig', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    copyright: data.config.copyright
+                                })
+                            });
+                            console.log('Config imported successfully');
+                        } catch (configError) {
+                            console.error('Failed to import config:', configError);
+                        }
+                    }
+                    
+                    // 调用后端 API 导入数据
+                    const response = await fetch('/api/import', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    if (result.code === 0) {
+                        let message = t('importSuccess');
+                        if (result.added !== undefined && result.skipped !== undefined) {
+                            message = t('importComplete') + result.added + t('skipDuplicate') + result.skipped + ' ';
+                        } else if (result.message) {
+                            message = result.message;
+                        }
+                        showToast(message, 'success');
+                        // 重新加载整个页面数据（包括tabs和links）
+                        await loadTabs();
+                        await loadLinks();
+                    } else {
+                        showToast(t('importFailed') + (result.message || t('unknownError')), 'error');
+                    }
+                });
             } catch (error) {
                 console.error('Parse JSON error:', error);
-                showToast(t('invalidFileFormat'), 'error');
+                if (error instanceof SyntaxError) {
+                    showToast(t('jsonFormatErrorMessage') + error.message, 'error');
+                } else {
+                    showToast(t('invalidFileFormat'), 'error');
+                }
+                // 失败时不关闭窗口，让用户可以修改内容后重试
             }
         }
 
@@ -2466,14 +2588,59 @@
                 
                 if (!bookmarks || bookmarks.length === 0) {
                     showToast('未找到有效的书签数据', 'error');
-                    return;
+                    return; // 失败时不关闭窗口
                 }
                 
-                // 调用原有的导入函数
-                await processChromeImport(bookmarks, targetTabId);
+                // 确认导入
+                customConfirm(`${t('confirmImport')} ${bookmarks.length} ${t('bookmarks')}？${t('willMergeWithExisting')}`, async (confirmed) => {
+                    if (!confirmed) {
+                        // 用户取消，不关闭窗口，让用户可以继续操作
+                        return;
+                    }
+                    
+                    // 用户确认后，关闭导入对话框
+                    closeImportTypeModal();
+                    
+                    // 逐个添加到指定选项卡
+                    let addedCount = 0;
+                    let failedCount = 0;
+                    
+                    for (const bookmark of bookmarks) {
+                        try {
+                            const response = await fetch('/api/add', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    name: bookmark.name,
+                                    url: bookmark.url,
+                                    tabId: targetTabId
+                                })
+                            });
+                            
+                            const result = await response.json();
+                            if (result.code === 0) {
+                                addedCount++;
+                            } else {
+                                failedCount++;
+                                console.warn('Failed to add bookmark:', bookmark.name, result.message);
+                            }
+                        } catch (err) {
+                            console.error('Failed to add bookmark:', bookmark.name, err);
+                            failedCount++;
+                        }
+                    }
+                    
+                    showToast(`${t('importComplete')}${addedCount}${t('skipDuplicate')}${failedCount}`, 'success');
+                    
+                    // 重新加载当前选项卡的数据
+                    await loadLinks();
+                });
             } catch (error) {
                 console.error('Parse HTML error:', error);
                 showToast('解析 HTML 失败：' + error.message, 'error');
+                // 失败时不关闭窗口，让用户可以修改内容后重试
             }
         }
         
@@ -2531,8 +2698,12 @@
                 // 确认导入
                 customConfirm(`${t('confirmImport')} ${bookmarks.length} ${t('bookmarks')}？${t('willMergeWithExisting')}`, async (confirmed) => {
                     if (!confirmed) {
+                        // 用户取消，不关闭窗口，让用户可以继续操作
                         return;
                     }
+                    
+                    // 用户确认后，关闭导入对话框
+                    closeImportTypeModal();
                     
                     // 逐个添加到指定选项卡
                     let addedCount = 0;
@@ -2618,8 +2789,12 @@
                 // 确认导入
                 customConfirm(`${t('confirmImport')} ${itemCount} ${t('bookmarks')}？${t('willMergeWithExisting')}`, async (confirmed) => {
                     if (!confirmed) {
+                        // 用户取消，不关闭窗口，让用户可以继续操作
                         return;
                     }
+                    
+                    // 用户确认后，关闭导入对话框
+                    closeImportTypeModal();
                 
                 // 如果包含 config，先保存配置
                 if (data.config) {
