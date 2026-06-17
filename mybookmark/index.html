@@ -146,28 +146,68 @@
         <div class="modal" style="max-width: 500px;">
             <h3 data-i18n="importData">导入数据</h3>
             
-            <!-- Step 1: Select import type -->
+            <!-- Step 0: Select import method -->
             <div style="margin-bottom: 20px;">
-                <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="importTypeLabel">选择导入类型：</label>
-                <div style="display: flex;flex-direction: column;gap: 10px;">
-                    <label style="display: flex;align-items: center;gap: 10px;padding: 12px;border: 2px solid #e2e8f0;border-radius: 8px;cursor: pointer;transition: all 0.3s;" onmouseover="this.style.borderColor='#4299e1';this.style.background='#ebf8ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='white'">
-                        <input type="radio" name="importType" value="mybookmark" checked onchange="onImportTypeChange()" style="width: 18px;height: 18px;cursor: pointer;">
-                        <span style="font-size: 14px;color: #2d3748;" data-i18n="importMyBookmark">我的收藏夹导出文件</span>
-                    </label>
-                    <label style="display: flex;align-items: center;gap: 10px;padding: 12px;border: 2px solid #e2e8f0;border-radius: 8px;cursor: pointer;transition: all 0.3s;" onmouseover="this.style.borderColor='#4299e1';this.style.background='#ebf8ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='white'">
-                        <input type="radio" name="importType" value="chrome" onchange="onImportTypeChange()" style="width: 18px;height: 18px;cursor: pointer;">
-                        <span style="font-size: 14px;color: #2d3748;" data-i18n="importChromeEdge">Chrome/Edge导出文件</span>
-                    </label>
+                <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="importMethodLabel">选择导入方式：</label>
+                <div style="display: flex;gap: 10px;">
+                    <button onclick="setImportMethod('file')" id="importMethodFileBtn" style="flex: 1;padding: 10px;background: #4299e1;color: white;border: none;border-radius: 6px;cursor: pointer;font-size: 14px;transition: all 0.3s;">
+                        <span data-i18n="importFromFile">📁 从文件导入</span>
+                    </button>
+                    <button onclick="setImportMethod('paste')" id="importMethodPasteBtn" style="flex: 1;padding: 10px;background: #e2e8f0;color: #4a5568;border: none;border-radius: 6px;cursor: pointer;font-size: 14px;transition: all 0.3s;">
+                        <span data-i18n="importFromText">📋 输入内容</span>
+                    </button>
                 </div>
             </div>
             
-            <!-- Step 2: Select file -->
-            <div style="margin-bottom: 20px;">
-                <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="selectFileLabel">选择文件：</label>
-                <button onclick="triggerFileSelect()" style="width: 100%;padding: 12px;background: #4299e1;color: white;border: none;border-radius: 6px;cursor: pointer;font-size: 14px;transition: background 0.3s;" onmouseover="this.style.background='#3182ce'" onmouseout="this.style.background='#4299e1'">
-                    <span data-i18n="clickToSelectFile">📁 点击选择文件</span>
-                </button>
-                <div id="selectedFileName" style="margin-top: 8px;padding: 8px;background: #f7fafc;border-radius: 4px;font-size: 13px;color: #4a5568;display: none;word-break: break-all;">
+            <!-- File Import Section -->
+            <div id="fileImportSection">
+                <!-- Step 1: Select import type -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="importTypeLabel">选择导入类型：</label>
+                    <div style="display: flex;flex-direction: column;gap: 10px;">
+                        <label style="display: flex;align-items: center;gap: 10px;padding: 12px;border: 2px solid #e2e8f0;border-radius: 8px;cursor: pointer;transition: all 0.3s;" onmouseover="this.style.borderColor='#4299e1';this.style.background='#ebf8ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='white'">
+                            <input type="radio" name="importType" value="mybookmark" checked onchange="onImportTypeChange()" style="width: 18px;height: 18px;cursor: pointer;">
+                            <span style="font-size: 14px;color: #2d3748;" data-i18n="importMyBookmark">我的收藏夹导出文件</span>
+                        </label>
+                        <label style="display: flex;align-items: center;gap: 10px;padding: 12px;border: 2px solid #e2e8f0;border-radius: 8px;cursor: pointer;transition: all 0.3s;" onmouseover="this.style.borderColor='#4299e1';this.style.background='#ebf8ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='white'">
+                            <input type="radio" name="importType" value="chrome" onchange="onImportTypeChange()" style="width: 18px;height: 18px;cursor: pointer;">
+                            <span style="font-size: 14px;color: #2d3748;" data-i18n="importChromeEdge">Chrome/Edge导出文件</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Step 2: Select file -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="selectFileLabel">选择文件：</label>
+                    <button onclick="triggerFileSelect()" style="width: 100%;padding: 12px;background: #4299e1;color: white;border: none;border-radius: 6px;cursor: pointer;font-size: 14px;transition: background 0.3s;" onmouseover="this.style.background='#3182ce'" onmouseout="this.style.background='#4299e1'">
+                        <span data-i18n="clickToSelectFile">📁 点击选择文件</span>
+                    </button>
+                    <div id="selectedFileName" style="margin-top: 8px;padding: 8px;background: #f7fafc;border-radius: 4px;font-size: 13px;color: #4a5568;display: none;word-break: break-all;">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Paste Content Section -->
+            <div id="pasteImportSection" style="display: none;">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="selectContentType">选择内容类型：</label>
+                    <div style="display: flex;flex-direction: column;gap: 10px;">
+                        <label style="display: flex;align-items: center;gap: 10px;padding: 12px;border: 2px solid #e2e8f0;border-radius: 8px;cursor: pointer;transition: all 0.3s;" onmouseover="this.style.borderColor='#4299e1';this.style.background='#ebf8ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='white'">
+                            <input type="radio" name="pasteType" value="mybookmark" checked onchange="onPasteTypeChange()" style="width: 18px;height: 18px;cursor: pointer;">
+                            <span style="font-size: 14px;color: #2d3748;" data-i18n="myBookmarkJSON">我的收藏夹 (JSON)</span>
+                        </label>
+                        <label style="display: flex;align-items: center;gap: 10px;padding: 12px;border: 2px solid #e2e8f0;border-radius: 8px;cursor: pointer;transition: all 0.3s;" onmouseover="this.style.borderColor='#4299e1';this.style.background='#ebf8ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='white'">
+                            <input type="radio" name="pasteType" value="chrome" onchange="onPasteTypeChange()" style="width: 18px;height: 18px;cursor: pointer;">
+                            <span style="font-size: 14px;color: #2d3748;" data-i18n="chromeEdgeHTML">Chrome/Edge书签 (HTML)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="pasteContentLabel">输入内容：</label>
+                    <textarea id="pasteContentArea" rows="10" data-i18n-placeholder="pasteContentPlaceholder" placeholder="请在此处直接输入 JSON 或 HTML 内容..." style="width: 100%;padding: 12px;border: 2px solid #e2e8f0;border-radius: 6px;font-size: 13px;font-family: monospace;resize: vertical;outline: none;" onfocus="this.style.borderColor='#4299e1'" onblur="this.style.borderColor='#e2e8f0'" oninput="checkPasteContent()"></textarea>
+                    <div id="pasteContentPreview" style="margin-top: 8px;padding: 8px;background: #f7fafc;border-radius: 4px;font-size: 13px;color: #4a5568;display: none;word-break: break-all;">
+                    </div>
                 </div>
             </div>
             
@@ -186,22 +226,78 @@
 
     <!-- Export Modal -->
     <div class="modal-overlay" id="exportModal">
-        <div class="modal">
+        <div class="modal" style="max-width: 600px;">
             <h3 data-i18n="exportData">导出数据</h3>
-            <div style="margin-bottom: 15px;">
-                <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" data-i18n="exportScopeLabel">选择导出范围：</label>
-                <select class="modal-input" id="exportScopeSelect">
-                    <option value="all" data-i18n="exportAllOption">全部数据（包含所有选项卡和标题）</option>
-                </select>
+            
+            <!-- Step 1: Select export method -->
+            <div style="margin-bottom: 20px;">
+                <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="exportMethodLabel">选择导出方式：</label>
+                <div style="display: flex;gap: 10px;">
+                    <button onclick="setExportMethod('file')" id="exportMethodFileBtn" style="flex: 1;padding: 10px;background: #4299e1;color: white;border: none;border-radius: 6px;cursor: pointer;font-size: 14px;transition: all 0.3s;">
+                        <span data-i18n="exportToFile">📁 导出到文件</span>
+                    </button>
+                    <button onclick="setExportMethod('text')" id="exportMethodTextBtn" style="flex: 1;padding: 10px;background: #e2e8f0;color: #4a5568;border: none;border-radius: 6px;cursor: pointer;font-size: 14px;transition: all 0.3s;">
+                        <span data-i18n="exportToText">📋 导出到文本框</span>
+                    </button>
+                </div>
             </div>
-            <div style="background: #ebf8ff;border-left: 4px solid #4299e1;padding: 12px;margin-bottom: 20px;border-radius: 4px;">
-                <p style="color: #2b6cb0;font-size: 13px;margin: 0;" data-i18n="exportTip">
-                    💡 <strong>提示：</strong>选择"全部数据"将导出标题、所有选项卡及其内容；选择单个选项卡仅导出该选项卡的站点。
-                </p>
+            
+            <!-- File Export Section -->
+            <div id="fileExportSection">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" data-i18n="exportScopeLabel">选择导出范围：</label>
+                    <select class="modal-input" id="exportScopeSelect" onchange="updateExportFormatOptions()">
+                        <option value="all" data-i18n="exportAllOption">全部数据（包含所有选项卡和标题）</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" data-i18n="exportFormatLabel">选择导出格式：</label>
+                    <select class="modal-input" id="exportFormatSelect">
+                        <option value="json" data-i18n="exportMyBookmarkFormat">我的收藏夹导出文件 (JSON)</option>
+                        <option value="html" data-i18n="exportChromeFormat" disabled>Chrome书签 (HTML)</option>
+                    </select>
+                </div>
+                <div style="background: #ebf8ff;border-left: 4px solid #4299e1;padding: 12px;margin-bottom: 20px;border-radius: 4px;">
+                    <p style="color: #2b6cb0;font-size: 13px;margin: 0;" id="exportTipText" data-i18n="exportTip">
+                         提示：选择"全部数据"将导出标题、所有选项卡及其内容；选择单个选项卡仅导出该选项卡的站点。
+                    </p>
+                </div>
             </div>
-            <div class="modal-buttons">
+            
+            <!-- Text Export Section -->
+            <div id="textExportSection" style="display: none;">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;">选择导出范围：</label>
+                    <select class="modal-input" id="exportScopeSelectText" onchange="updateTextExportFormatOptions()">
+                        <option value="all" data-i18n="exportAllOption">全部数据（包含所有选项卡和标题）</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;">选择导出格式：</label>
+                    <select class="modal-input" id="exportFormatSelectText" onchange="generateExportContent()">
+                        <option value="json">我的收藏夹导出文件 (JSON)</option>
+                        <option value="html" disabled>Chrome书签 (HTML)</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" data-i18n="exportContentLabel">导出内容：</label>
+                    <textarea id="exportContentArea" rows="12" readonly style="width: 100%;padding: 12px;border: 2px solid #e2e8f0;border-radius: 6px;font-size: 13px;font-family: monospace;resize: vertical;outline: none;background: #f7fafc;" onfocus="this.style.borderColor='#4299e1'" onblur="this.style.borderColor='#e2e8f0'"></textarea>
+                    <div style="margin-top: 8px;display: flex;justify-content: space-between;align-items: center;">
+                        <span id="exportContentInfo" style="font-size: 13px;color: #718096;"></span>
+                        <button onclick="copyExportContent()" id="copyExportBtn" style="padding: 8px 16px;background: #4299e1;color: white;border: none;border-radius: 6px;cursor: pointer;font-size: 13px;transition: all 0.3s;" disabled>
+                            <span data-i18n="copyContent">📋 复制内容</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-buttons" id="fileExportButtons">
                 <button class="cancel-btn" onclick="closeExportModal()" data-i18n="cancel">取消</button>
                 <button class="save-btn" onclick="confirmExport()" data-i18n="exportData">导出</button>
+            </div>
+            
+            <div class="modal-buttons" id="textExportButtons" style="display: none;">
+                <button class="cancel-btn" onclick="closeExportModal()" data-i18n="cancel">关闭</button>
             </div>
         </div>
     </div>
@@ -221,7 +317,7 @@
                 importData: '导入数据',
                 importTypeLabel: '选择导入类型：',
                 importMyBookmark: '我的收藏夹导出文件',
-                importChromeEdge: 'Chrome/Edge导出文件',
+                importChromeEdge: 'Chrome/Edge书签文件',
                 selectTabForImport: '请选择要导入到的选项卡：',
                 startImport: '开始导入',
                 selectFileLabel: '选择文件：',
@@ -294,14 +390,41 @@
                 exportScopeLabel: '选择导出范围：',
                 exportAllOption: '全部数据（包含所有选项卡和标题）',
                 exportSingleOption: '{name} ({count}个站点)',
-                exportTip: '💡 提示：选择"全部数据"将导出标题、所有选项卡及其内容；选择单个选项卡仅导出该选项卡的站点。',
+                exportTip: ' 提示：选择"全部数据"将导出标题、所有选项卡及其内容；选择单个选项卡仅导出该选项卡的站点。',
+                exportFormatLabel: '选择导出格式：',
+                exportMyBookmarkFormat: '我的收藏夹导出文件 (JSON)',
+                exportChromeFormat: 'Chrome书签 (HTML)',
+                exportFormatTip: '💡 提示：选择"Chrome书签"时，只能导出单个选项卡，且导出的HTML文件可直接导入到Chrome浏览器。',
                 moveToOtherTab: '移动到其它选项卡',
                 refreshIcon: '刷新图标',
                 lockCard: '锁定卡片',
                 unlockCard: '解锁卡片',
                 confirmLock: '确定要锁定此卡片吗？锁定后只能点击打开网站。',
                 confirmUnlock: '确定要解锁此卡片吗？解锁后可以编辑和拖动卡片。',
-                lockedCardTip: '卡片已锁定'
+                lockedCardTip: '卡片已锁定',
+                importMethodLabel: '选择导入方式：',
+                importFromFile: '📁 从文件导入',
+                importFromText: '📋 输入内容',
+                pasteContentLabel: '粘贴内容：',
+                pasteContentPlaceholder: '请在此处粘贴 JSON 或 HTML 内容...',
+                selectContentType: '选择内容类型：',
+                myBookmarkJSON: '我的收藏夹 (JSON)',
+                chromeEdgeHTML: 'Chrome/Edge书签 (HTML)',
+                exportMethodLabel: '选择导出方式：',
+                exportToFile: '📁 导出到文件',
+                exportToText: '📋 导出到文本框',
+                exportContentLabel: '导出内容：',
+                copyContent: '📋 复制内容',
+                contentCopied: '内容已复制到剪贴板',
+                copyFailed: '复制失败，请手动复制',
+                noContentToCopy: '没有可复制的内容',
+                generatedFormatSize: '已生成 {format} 格式，大小: {size} KB',
+                jsonFormatErrorMissingTabs: '❌ JSON 格式错误：缺少 tabs 数组结构',
+                jsonFormatErrorIncompleteStructure: '❌ JSON 格式错误：选项卡结构不完整（需要 id、name、links 字段）',
+                jsonFormatErrorMessage: '❌ JSON 格式错误：',
+                htmlFormatErrorInvalid: '❌ HTML 格式错误：不是有效的 Chrome/Edge 书签格式（缺少 DOCTYPE 声明）',
+                htmlFormatErrorIncomplete: '❌ HTML 格式错误：书签结构不完整（缺少必要的 DL/DT/A 标签）',
+                formatCorrectInputChars: '✅ {format} 格式正确 - 已输入 {chars} 个字符'
             },
             en: {
                 pageTitle: 'My Bookmarks',
@@ -389,13 +512,40 @@
                 exportAllOption: 'All Data (includes all tabs and title)',
                 exportSingleOption: '{name} ({count} sites)',
                 exportTip: '💡 Tip: Select "All Data" to export title, all tabs and their content; select a single tab to export only that tab\'s sites.',
+                exportFormatLabel: 'Select Export Format:',
+                exportMyBookmarkFormat: 'My Bookmark Export File (JSON)',
+                exportChromeFormat: 'Chrome Bookmarks (HTML)',
+                exportFormatTip: '💡 Tip: When selecting "Chrome Bookmarks", you can only export a single tab, and the exported HTML file can be directly imported into Chrome browser.',
                 moveToOtherTab: 'Move to Other Tab',
                 refreshIcon: 'Refresh Icon',
                 lockCard: 'Lock Card',
                 unlockCard: 'Unlock Card',
                 confirmLock: 'Are you sure to lock this card? After locking, you can only click to open the website.',
                 confirmUnlock: 'Are you sure to unlock this card? After unlocking, you can edit and drag the card.',
-                lockedCardTip: 'Card is locked'
+                lockedCardTip: 'Card is locked',
+                importMethodLabel: 'Select Import Method:',
+                importFromFile: '📁 Import from File',
+                importFromText: '📋 Input Content',
+                pasteContentLabel: 'Paste Content:',
+                pasteContentPlaceholder: 'Please paste JSON or HTML content here...',
+                selectContentType: 'Select Content Type:',
+                myBookmarkJSON: 'My Bookmark (JSON)',
+                chromeEdgeHTML: 'Chrome/Edge Bookmarks (HTML)',
+                exportMethodLabel: 'Select Export Method:',
+                exportToFile: '📁 Export to File',
+                exportToText: '📋 Export to Text Box',
+                exportContentLabel: 'Export Content:',
+                copyContent: '📋 Copy Content',
+                contentCopied: 'Content copied to clipboard',
+                copyFailed: 'Copy failed, please copy manually',
+                noContentToCopy: 'No content to copy',
+                generatedFormatSize: 'Generated {format} format, size: {size} KB',
+                jsonFormatErrorMissingTabs: '❌ JSON Format Error: Missing tabs array structure',
+                jsonFormatErrorIncompleteStructure: '❌ JSON Format Error: Incomplete tab structure (requires id, name, links fields)',
+                jsonFormatErrorMessage: '❌ JSON Format Error: ',
+                htmlFormatErrorInvalid: '❌ HTML Format Error: Not a valid Chrome/Edge bookmark format (missing DOCTYPE declaration)',
+                htmlFormatErrorIncomplete: '❌ HTML Format Error: Incomplete bookmark structure (missing required DL/DT/A tags)',
+                formatCorrectInputChars: '✅ {format} format correct - {chars} characters entered'
             }
         };
         
@@ -1528,7 +1678,7 @@
                 const data = await res.json();
                 const tabs = data.tabs || [];
                 
-                // 填充选项卡列表
+                // 填充文件导出选项卡列表
                 const select = document.getElementById('exportScopeSelect');
                 select.innerHTML = `<option value="all" data-i18n="exportAllOption">${t('exportAllOption')}</option>`;
                 
@@ -1540,16 +1690,232 @@
                     select.appendChild(option);
                 });
                 
+                // 填充文本导出选项卡列表
+                const selectText = document.getElementById('exportScopeSelectText');
+                selectText.innerHTML = `<option value="all" data-i18n="exportAllOption">${t('exportAllOption')}</option>`;
+                
+                tabs.forEach(tab => {
+                    const option = document.createElement('option');
+                    option.value = tab.id;
+                    const siteCount = tab.links ? tab.links.length : 0;
+                    option.textContent = t('exportSingleOption', { name: tab.name, count: siteCount });
+                    selectText.appendChild(option);
+                });
+                
+                // 重置格式选择为 JSON
+                const formatSelect = document.getElementById('exportFormatSelect');
+                formatSelect.value = 'json';
+                
+                const formatSelectText = document.getElementById('exportFormatSelectText');
+                formatSelectText.value = 'json';
+                
+                // 初始化格式选项状态
+                updateExportFormatOptions();
+                updateTextExportFormatOptions();
+                
+                // 重置为文件导出方式
+                setExportMethod('file');
+                
+                // 清空文本框内容
+                document.getElementById('exportContentArea').value = '';
+                document.getElementById('exportContentInfo').textContent = '';
+                
                 document.getElementById('exportModal').style.display = 'flex';
             } catch (error) {
                 console.error('Get data error:', error);
                 showToast('获取数据失败', 'error');
             }
         }
+        
+        // 设置导出方式
+        function setExportMethod(method) {
+            currentExportMethod = method;
+            
+            const fileBtn = document.getElementById('exportMethodFileBtn');
+            const textBtn = document.getElementById('exportMethodTextBtn');
+            const fileSection = document.getElementById('fileExportSection');
+            const textSection = document.getElementById('textExportSection');
+            const fileButtons = document.getElementById('fileExportButtons');
+            const textButtons = document.getElementById('textExportButtons');
+            
+            if (method === 'file') {
+                // 显示文件导出区域
+                fileBtn.style.background = '#4299e1';
+                fileBtn.style.color = 'white';
+                textBtn.style.background = '#e2e8f0';
+                textBtn.style.color = '#4a5568';
+                fileSection.style.display = 'block';
+                textSection.style.display = 'none';
+                fileButtons.style.display = 'flex';
+                textButtons.style.display = 'none';
+            } else {
+                // 显示文本导出区域
+                textBtn.style.background = '#4299e1';
+                textBtn.style.color = 'white';
+                fileBtn.style.background = '#e2e8f0';
+                fileBtn.style.color = '#4a5568';
+                textSection.style.display = 'block';
+                fileSection.style.display = 'none';
+                textButtons.style.display = 'flex';
+                fileButtons.style.display = 'none';
+                
+                // 自动生成导出内容
+                generateExportContent();
+            }
+        }
+        
+        // 更新文本导出格式选项
+        function updateTextExportFormatOptions() {
+            const scope = document.getElementById('exportScopeSelectText').value;
+            const formatSelect = document.getElementById('exportFormatSelectText');
+            const htmlOption = formatSelect.querySelector('option[value="html"]');
+            
+            if (scope === 'all') {
+                // 选择全部数据时，禁用 HTML 格式
+                htmlOption.disabled = true;
+                formatSelect.value = 'json';
+            } else {
+                // 选择单个选项卡时，启用 HTML 格式
+                htmlOption.disabled = false;
+            }
+            
+            // 重新生成内容
+            generateExportContent();
+        }
+        
+        // 生成导出内容到文本框
+        async function generateExportContent() {
+            const scope = document.getElementById('exportScopeSelectText').value;
+            const format = document.getElementById('exportFormatSelectText').value;
+            const contentArea = document.getElementById('exportContentArea');
+            const infoSpan = document.getElementById('exportContentInfo');
+            const copyBtn = document.getElementById('copyExportBtn');
+            
+            try {
+                const res = await fetch('/api/get');
+                const data = await res.json();
+                
+                let content = '';
+                
+                if (format === 'html') {
+                    // Chrome书签 HTML 格式
+                    let tabsToExport = [];
+                    if (scope === 'all') {
+                        tabsToExport = data.tabs;
+                    } else {
+                        const selectedTab = data.tabs.find(t => t.id === scope);
+                        if (selectedTab) {
+                            tabsToExport = [selectedTab];
+                        }
+                    }
+                    content = generateChromeBookmarksHTML(tabsToExport);
+                } else {
+                    // JSON 格式
+                    let exportData;
+                    
+                    if (scope === 'all') {
+                        // 导出全部数据，包含 config.json
+                        const configRes = await fetch('/api/getConfig');
+                        const configData = await configRes.json();
+                        
+                        exportData = {
+                            ...data,
+                            config: {
+                                port: configData.port,
+                                copyright: configData.copyright
+                            }
+                        };
+                    } else {
+                        // 导出单个选项卡
+                        const tabId = scope;
+                        const selectedTab = data.tabs.find(t => t.id === tabId);
+                        
+                        if (!selectedTab) {
+                            contentArea.value = '未找到选中的选项卡';
+                            infoSpan.textContent = '';
+                            copyBtn.disabled = true;
+                            return;
+                        }
+                        
+                        exportData = {
+                            tabs: [selectedTab]
+                        };
+                    }
+                    
+                    content = JSON.stringify(exportData, null, 2);
+                }
+                
+                // 显示内容
+                contentArea.value = content;
+                
+                // 显示信息
+                const sizeKB = (content.length / 1024).toFixed(2);
+                const formatName = format === 'json' ? 'JSON' : 'HTML';
+                const infoText = t('generatedFormatSize').replace('{format}', formatName).replace('{size}', sizeKB);
+                infoSpan.textContent = infoText;
+                
+                // 启用复制按钮
+                copyBtn.disabled = false;
+                copyBtn.style.opacity = '1';
+                copyBtn.style.cursor = 'pointer';
+                
+            } catch (error) {
+                console.error('Generate export content error:', error);
+                contentArea.value = '生成内容失败：' + error.message;
+                infoSpan.textContent = '';
+                copyBtn.disabled = true;
+            }
+        }
+        
+        // 复制导出内容
+        function copyExportContent() {
+            const contentArea = document.getElementById('exportContentArea');
+            const content = contentArea.value;
+            
+            if (!content) {
+                showToast(t('noContentToCopy'), 'error');
+                return;
+            }
+            
+            // 使用 Clipboard API
+            navigator.clipboard.writeText(content).then(() => {
+                showToast(t('contentCopied'), 'success');
+            }).catch(err => {
+                console.error('Copy error:', err);
+                // 降级方案：使用传统的 execCommand
+                contentArea.select();
+                contentArea.setSelectionRange(0, content.length);
+                try {
+                    document.execCommand('copy');
+                    showToast(t('contentCopied'), 'success');
+                } catch (e) {
+                    showToast(t('copyFailed'), 'error');
+                }
+            });
+        }
 
         // 关闭导出弹窗
         function closeExportModal() {
             document.getElementById('exportModal').style.display = 'none';
+        }
+
+        // 更新导出格式选项（根据选择的范围）
+        function updateExportFormatOptions() {
+            const scope = document.getElementById('exportScopeSelect').value;
+            const formatSelect = document.getElementById('exportFormatSelect');
+            const htmlOption = formatSelect.querySelector('option[value="html"]');
+            const tipText = document.getElementById('exportTipText');
+            
+            if (scope === 'all') {
+                // 选择全部数据时，禁用 HTML 格式
+                htmlOption.disabled = true;
+                formatSelect.value = 'json';
+                tipText.textContent = t('exportTip');
+            } else {
+                // 选择单个选项卡时，启用 HTML 格式
+                htmlOption.disabled = false;
+                tipText.textContent = t('exportFormatTip');
+            }
         }
 
         // 格式化日期时间为 yyyyMMddHHmmss
@@ -1566,57 +1932,64 @@
         // 确认导出
         async function confirmExport() {
             const scope = document.getElementById('exportScopeSelect').value;
+            const format = document.getElementById('exportFormatSelect').value;
             
             try {
                 const res = await fetch('/api/get');
                 const data = await res.json();
                 
-                let exportData;
-                let filename;
-                
-                if (scope === 'all') {
-                    // 导出全部数据，包含 config.json
-                    const configRes = await fetch('/api/getConfig');
-                    const configData = await configRes.json();
-                    
-                    exportData = {
-                        ...data,
-                        config: {
-                            port: configData.port,
-                            copyright: configData.copyright
-                        }
-                    };
-                    filename = `mybookmark_full_backup_${formatDateTime(new Date())}.json`;
+                if (format === 'html') {
+                    // Chrome书签 HTML 格式
+                    await exportAsChromeHTML(data, scope);
                 } else {
-                    // 导出单个选项卡
-                    const tabId = scope; // Tab ID 可能是字符串或数字
-                    const selectedTab = data.tabs.find(t => t.id === tabId);
+                    // JSON 格式（原有逻辑）
+                    let exportData;
+                    let filename;
                     
-                    if (!selectedTab) {
-                        showToast('未找到选中的选项卡', 'error');
-                        return;
+                    if (scope === 'all') {
+                        // 导出全部数据，包含 config.json
+                        const configRes = await fetch('/api/getConfig');
+                        const configData = await configRes.json();
+                        
+                        exportData = {
+                            ...data,
+                            config: {
+                                port: configData.port,
+                                copyright: configData.copyright
+                            }
+                        };
+                        filename = `mybookmark_full_backup_${formatDateTime(new Date())}.json`;
+                    } else {
+                        // 导出单个选项卡
+                        const tabId = scope; // Tab ID 可能是字符串或数字
+                        const selectedTab = data.tabs.find(t => t.id === tabId);
+                        
+                        if (!selectedTab) {
+                            showToast('未找到选中的选项卡', 'error');
+                            return;
+                        }
+                        
+                        // 只包含该选项卡的内容，不包含 title、iconSize、currentTabId
+                        exportData = {
+                            tabs: [selectedTab]
+                        };
+                        filename = `mybookmark_${selectedTab.name}_${formatDateTime(new Date())}.json`;
                     }
                     
-                    // 只包含该选项卡的内容，不包含 title、iconSize、currentTabId
-                    exportData = {
-                        tabs: [selectedTab]
-                    };
-                    filename = `mybookmark_${selectedTab.name}_${formatDateTime(new Date())}.json`;
+                    // 创建JSON文件
+                    const jsonStr = JSON.stringify(exportData, null, 2);
+                    const blob = new Blob([jsonStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    // 创建下载链接
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
                 }
-                
-                // 创建JSON文件
-                const jsonStr = JSON.stringify(exportData, null, 2);
-                const blob = new Blob([jsonStr], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                
-                // 创建下载链接
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
                 
                 closeExportModal();
                 console.log('Data exported successfully');
@@ -1627,8 +2000,245 @@
             }
         }
 
+        // 导出为 Chrome HTML 格式
+        async function exportAsChromeHTML(data, scope) {
+            // 获取要导出的选项卡
+            let tabsToExport = [];
+            if (scope === 'all') {
+                tabsToExport = data.tabs;
+            } else {
+                const selectedTab = data.tabs.find(t => t.id === scope);
+                if (selectedTab) {
+                    tabsToExport = [selectedTab];
+                }
+            }
+            
+            if (tabsToExport.length === 0) {
+                showToast('没有可导出的数据', 'error');
+                return;
+            }
+            
+            // 生成 Chrome 书签 HTML
+            const htmlContent = generateChromeBookmarksHTML(tabsToExport);
+            
+            // 创建文件名
+            const timestamp = formatDateTime(new Date());
+            let filename;
+            if (scope === 'all') {
+                filename = `chrome_bookmarks_all_${timestamp}.html`;
+            } else {
+                const tabName = tabsToExport[0].name.replace(/[\\/:*?"<>|]/g, '_');
+                filename = `chrome_bookmarks_${tabName}_${timestamp}.html`;
+            }
+            
+            // 创建并下载文件
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 生成 Chrome 书签 HTML
+        function generateChromeBookmarksHTML(tabs) {
+            const now = new Date();
+            const timestamp = Math.floor(now.getTime() / 1000);
+            
+            let html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<!-- This is an automatically generated file.
+     It will be read and overwritten.
+     DO NOT EDIT! -->
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+`;
+            
+            tabs.forEach(tab => {
+                // 直接使用选项卡名称作为根文件夹
+                html += `    <DT><H3 ADD_DATE="${timestamp}" LAST_MODIFIED="${timestamp}">${escapeHtml(tab.name)}</H3>
+    <DL><p>
+`;
+                
+                if (tab.links && tab.links.length > 0) {
+                    tab.links.forEach(link => {
+                        const linkTimestamp = timestamp;
+                        html += `        <DT><A HREF="${escapeHtml(link.url)}" ADD_DATE="${linkTimestamp}">${escapeHtml(link.name)}</A>
+`;
+                    });
+                }
+                
+                html += `    </DL><p>
+`;
+            });
+            
+            html += `</DL><p>
+`;
+            
+            return html;
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         // 全局变量存储待导入的文件
         let pendingImportFile = null;
+        
+        // 当前导入方式 ('file' 或 'paste')
+        let currentImportMethod = 'file';
+        
+        // 当前导出方式 ('file' 或 'text')
+        let currentExportMethod = 'file';
+        
+        // 设置导入方式
+        function setImportMethod(method) {
+            currentImportMethod = method;
+            
+            const fileBtn = document.getElementById('importMethodFileBtn');
+            const pasteBtn = document.getElementById('importMethodPasteBtn');
+            const fileSection = document.getElementById('fileImportSection');
+            const pasteSection = document.getElementById('pasteImportSection');
+            
+            if (method === 'file') {
+                // 显示文件导入区域
+                fileBtn.style.background = '#4299e1';
+                fileBtn.style.color = 'white';
+                pasteBtn.style.background = '#e2e8f0';
+                pasteBtn.style.color = '#4a5568';
+                fileSection.style.display = 'block';
+                pasteSection.style.display = 'none';
+                
+                // 重置粘贴内容
+                document.getElementById('pasteContentArea').value = '';
+                document.getElementById('pasteContentPreview').style.display = 'none';
+            } else {
+                // 显示粘贴内容区域
+                fileBtn.style.background = '#e2e8f0';
+                fileBtn.style.color = '#4a5568';
+                pasteBtn.style.background = '#4299e1';
+                pasteBtn.style.color = 'white';
+                fileSection.style.display = 'none';
+                pasteSection.style.display = 'block';
+                
+                // 重置文件选择
+                pendingImportFile = null;
+                document.getElementById('importFile').value = '';
+                document.getElementById('selectedFileName').style.display = 'none';
+            }
+            
+            // 禁用开始导入按钮，等待用户操作
+            const startBtn = document.getElementById('startImportBtn');
+            startBtn.disabled = true;
+            startBtn.style.opacity = '0.5';
+            startBtn.style.cursor = 'not-allowed';
+        }
+        
+        // 处理粘贴类型变化
+        function onPasteTypeChange() {
+            // 检查是否有内容
+            checkPasteContent();
+        }
+        
+        // 检查粘贴内容
+        function checkPasteContent() {
+            const content = document.getElementById('pasteContentArea').value.trim();
+            const previewDiv = document.getElementById('pasteContentPreview');
+            const startBtn = document.getElementById('startImportBtn');
+            const pasteType = document.querySelector('input[name="pasteType"]:checked').value;
+            
+            if (content.length === 0) {
+                previewDiv.style.display = 'none';
+                
+                // 禁用开始导入按钮
+                startBtn.disabled = true;
+                startBtn.style.opacity = '0.5';
+                startBtn.style.cursor = 'not-allowed';
+                return;
+            }
+            
+            // 根据类型进行格式校验
+            let isValid = false;
+            let errorMsg = '';
+            
+            if (pasteType === 'mybookmark') {
+                // 校验 JSON 格式
+                try {
+                    const parsed = JSON.parse(content);
+                    // 进一步验证数据结构
+                    if (!parsed.tabs || !Array.isArray(parsed.tabs)) {
+                        errorMsg = t('jsonFormatErrorMissingTabs');
+                        isValid = false;
+                    } else {
+                        // 验证每个选项卡是否有必要的字段
+                        const hasValidStructure = parsed.tabs.every(tab => 
+                            tab.id && tab.name && Array.isArray(tab.links)
+                        );
+                        if (!hasValidStructure) {
+                            errorMsg = t('jsonFormatErrorIncompleteStructure');
+                            isValid = false;
+                        } else {
+                            isValid = true;
+                        }
+                    }
+                } catch (e) {
+                    errorMsg = t('jsonFormatErrorMessage') + e.message;
+                    isValid = false;
+                }
+            } else if (pasteType === 'chrome') {
+                // 校验 HTML 格式（检查是否包含书签相关标签）
+                const htmlLower = content.toLowerCase();
+                
+                // 检查是否是有效的 Netscape 书签格式
+                const isNetscapeFormat = htmlLower.includes('<!doctype netscape-bookmark-file-1>');
+                const hasBookmarkStructure = htmlLower.includes('<dl>') && 
+                                            htmlLower.includes('<dt>') && 
+                                            (htmlLower.includes('<a href=') || htmlLower.includes('<h3'));
+                
+                if (isNetscapeFormat && hasBookmarkStructure) {
+                    isValid = true;
+                } else if (!isNetscapeFormat) {
+                    errorMsg = t('htmlFormatErrorInvalid');
+                    isValid = false;
+                } else {
+                    errorMsg = t('htmlFormatErrorIncomplete');
+                    isValid = false;
+                }
+            }
+            
+            // 显示预览和验证结果
+            const previewText = content.length > 100 ? content.substring(0, 100) + '...' : content;
+            if (isValid) {
+                const formatName = pasteType === 'mybookmark' ? 'JSON' : 'HTML';
+                const successMsg = t('formatCorrectInputChars').replace('{format}', formatName).replace('{chars}', content.length);
+                previewDiv.innerHTML = `<span style="color: #38a169;">${successMsg}</span><br><span style="color: #718096;font-size: 12px;">${previewText}</span>`;
+                previewDiv.style.display = 'block';
+                
+                // 启用开始导入按钮
+                startBtn.disabled = false;
+                startBtn.style.opacity = '1';
+                startBtn.style.cursor = 'pointer';
+            } else {
+                previewDiv.innerHTML = `<span style="color: #e53e3e;">${errorMsg}</span>`;
+                previewDiv.style.display = 'block';
+                
+                // 禁用开始导入按钮
+                startBtn.disabled = true;
+                startBtn.style.opacity = '0.5';
+                startBtn.style.cursor = 'not-allowed';
+            }
+        }
         
         // 触发文件选择
         function triggerFileSelect() {
@@ -1668,8 +2278,12 @@
         async function openImportTypeModal() {
             document.getElementById('importTypeModal').style.display = 'flex';
             
+            // 重置为文件导入方式
+            setImportMethod('file');
+            
             // 重置选项
             document.querySelector('input[name="importType"][value="mybookmark"]').checked = true;
+            document.querySelector('input[name="pasteType"][value="mybookmark"]').checked = true;
             document.getElementById('chromeImportTabSection').style.display = 'none';
             
             // 重置文件选择
@@ -1678,6 +2292,10 @@
             const fileNameDiv = document.getElementById('selectedFileName');
             fileNameDiv.style.display = 'none';
             fileNameDiv.textContent = '';
+            
+            // 重置粘贴内容
+            document.getElementById('pasteContentArea').value = '';
+            document.getElementById('pasteContentPreview').style.display = 'none';
             
             // 禁用开始导入按钮
             const startBtn = document.getElementById('startImportBtn');
@@ -1760,22 +2378,46 @@
         
         // 开始导入流程
         async function startImportProcess() {
-            if (!pendingImportFile) {
-                showToast(t('invalidFileFormat'), 'error');
-                return;
+            const importType = currentImportMethod === 'file' 
+                ? document.querySelector('input[name="importType"]:checked').value
+                : document.querySelector('input[name="pasteType"]:checked').value;
+            
+            let dataToImport;
+            
+            if (currentImportMethod === 'file') {
+                // 从文件导入
+                if (!pendingImportFile) {
+                    showToast(t('invalidFileFormat'), 'error');
+                    return;
+                }
+                
+                try {
+                    const fileContent = await readFileAsText(pendingImportFile);
+                    dataToImport = fileContent;
+                } catch (error) {
+                    console.error('Read file error:', error);
+                    showToast('读取文件失败：' + error.message, 'error');
+                    return;
+                }
+            } else {
+                // 从粘贴内容导入
+                const content = document.getElementById('pasteContentArea').value.trim();
+                if (!content) {
+                    showToast('请粘贴内容', 'warning');
+                    return;
+                }
+                dataToImport = content;
             }
             
-            const importType = document.querySelector('input[name="importType"]:checked').value;
-            
-            // 保存文件引用，因为 closeImportTypeModal 会清空 pendingImportFile
-            const fileToImport = pendingImportFile;
+            // 保存数据引用，因为 closeImportTypeModal 会清空
+            const dataRef = dataToImport;
             
             // 先关闭对话框
             closeImportTypeModal();
             
             if (importType === 'mybookmark') {
                 // 使用原有的导入逻辑
-                await importMyBookmarkData(fileToImport);
+                await importMyBookmarkDataFromString(dataRef);
             } else if (importType === 'chrome') {
                 // 使用 Chrome/Edge 导入逻辑
                 const targetTabId = document.getElementById('chromeImportTabSelect').value;
@@ -1783,7 +2425,55 @@
                     showToast(t('selectTabForImport'), 'error');
                     return;
                 }
-                await importChromeBookmarks(fileToImport, targetTabId);
+                await importChromeBookmarksFromString(dataRef, targetTabId);
+            }
+        }
+
+        // 读取文件为文本
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error('Failed to read file'));
+                reader.readAsText(file);
+            });
+        }
+
+        // 从字符串导入 My Bookmark 数据
+        async function importMyBookmarkDataFromString(jsonString) {
+            try {
+                const data = JSON.parse(jsonString);
+                
+                // 验证数据结构
+                if (!data.tabs || !Array.isArray(data.tabs)) {
+                    showToast(t('invalidFileFormat'), 'error');
+                    return;
+                }
+                
+                // 调用原有的导入函数
+                await processImportedData(data);
+            } catch (error) {
+                console.error('Parse JSON error:', error);
+                showToast(t('invalidFileFormat'), 'error');
+            }
+        }
+
+        // 从字符串导入 Chrome 书签
+        async function importChromeBookmarksFromString(htmlString, targetTabId) {
+            try {
+                // 解析 HTML 并提取书签
+                const bookmarks = parseChromeBookmarksHTML(htmlString);
+                
+                if (!bookmarks || bookmarks.length === 0) {
+                    showToast('未找到有效的书签数据', 'error');
+                    return;
+                }
+                
+                // 调用原有的导入函数
+                await processChromeImport(bookmarks, targetTabId);
+            } catch (error) {
+                console.error('Parse HTML error:', error);
+                showToast('解析 HTML 失败：' + error.message, 'error');
             }
         }
         
