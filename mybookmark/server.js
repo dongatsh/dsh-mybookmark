@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 const https = require('https');
+const crypto = require('crypto');
 
 // 读取配置文件
 const CONFIG_FILE = path.join(__dirname, 'config.json');
@@ -39,7 +40,17 @@ const DEFAULT_FAVICON = path.join(__dirname, 'website.png');
 const SETTING_FILE = path.join(__dirname, 'setting.ini');
 const LOG_FILE = path.join(__dirname, 'mybookmark.log');
 
-// 生成随机 ID（16位十六进制字符串）
+// 生成 ID（基于URL的MD5 hash值）
+function generateIdFromUrl(urlStr) {
+  if (!urlStr) {
+    // 如果没有URL，回退到随机ID
+    return Math.random().toString(16).substring(2, 18);
+  }
+  // 计算URL的MD5 hash值（32位十六进制字符串）
+  return crypto.createHash('md5').update(urlStr).digest('hex');
+}
+
+// 生成随机 ID（16位十六进制字符串）- 用于Tab等不需要基于URL的场景
 function generateRandomId() {
   return Math.random().toString(16).substring(2, 18);
 }
@@ -997,7 +1008,7 @@ const server = http.createServer((req, res) => {
             logInfo(`✏️ Using provided name: ${name}`);
           }
           
-          const newLink = { id: generateRandomId(), name: name, url: url };
+          const newLink = { id: generateIdFromUrl(url), name: name, url: url };
           // 如果有 note，也保存
           if (item.note) {
             newLink.note = item.note;
@@ -1280,9 +1291,13 @@ const server = http.createServer((req, res) => {
               const existingIds = new Set(existingTab.links.map(link => link.id));
               
               importedTab.links.forEach(link => {
-                if (!existingIds.has(link.id)) {
+                // 重新计算ID为URL的MD5 hash
+                const newId = generateIdFromUrl(link.url);
+                link.id = newId;
+                
+                if (!existingIds.has(newId)) {
                   existingTab.links.push(link);
-                  existingIds.add(link.id);
+                  existingIds.add(newId);
                 }
               });
             } else {
@@ -1324,9 +1339,13 @@ const server = http.createServer((req, res) => {
           let duplicateCount = 0;
           
           importedData.links.forEach(link => {
-            if (!existingIds.has(link.id)) {
+            // 重新计算ID为URL的MD5 hash
+            const newId = generateIdFromUrl(link.url);
+            link.id = newId;
+            
+            if (!existingIds.has(newId)) {
               newLinks.push(link);
-              existingIds.add(link.id); // 添加到集合中，防止导入数据内部重复
+              existingIds.add(newId); // 添加到集合中，防止导入数据内部重复
             } else {
               duplicateCount++;
             }
@@ -1386,9 +1405,13 @@ const server = http.createServer((req, res) => {
         let duplicateCount = 0;
         
         links.forEach(link => {
-          if (!existingIds.has(link.id)) {
+          // 重新计算ID为URL的MD5 hash
+          const newId = generateIdFromUrl(link.url);
+          link.id = newId;
+          
+          if (!existingIds.has(newId)) {
             newLinks.push(link);
-            existingIds.add(link.id);
+            existingIds.add(newId);
           } else {
             duplicateCount++;
           }

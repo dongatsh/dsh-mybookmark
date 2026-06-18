@@ -426,7 +426,7 @@
                 classicBookmarks: '🌟 经典收藏',
                 selectCategoryLabel: '选择主题分类：',
                 loadingCategories: '加载中...',
-                selectCategoryPlaceholder: '请选择主题分类',
+                selectCategoryPlaceholder: '请选择主题分类...',
                 loadFailed: '加载失败',
                 previewContentLabel: '预览内容：',
                 loadingDots: '加载中...',
@@ -554,7 +554,7 @@
                 classicBookmarks: '🌟 Classic Bookmarks',
                 selectCategoryLabel: 'Select Category:',
                 loadingCategories: 'Loading...',
-                selectCategoryPlaceholder: 'Please select a category',
+                selectCategoryPlaceholder: 'Please select a category...',
                 loadFailed: 'Load failed',
                 previewContentLabel: 'Preview:',
                 loadingDots: 'Loading...',
@@ -3401,7 +3401,7 @@
             select.innerHTML = `<option value="">${t('loadingDots')}</option>`;
             
             try {
-                const response = await fetch('https://mb.ostour.cn/api/siteCategories/open?filter=AI');
+                const response = await fetch('https://mb.ostour.cn/api/siteCategories/open');
                 const result = await response.json();
                 
                 if (result.code === 0 && result.data && result.data.length > 0) {
