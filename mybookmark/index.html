@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -223,8 +223,16 @@
                     </select>
                 </div>
                 <div id="classicPreviewSection" style="display: none;margin-bottom: 20px;">
-                    <label style="display: block;margin-bottom: 10px;font-weight: bold;color: #4a5568;" data-i18n="previewContentLabel">预览内容：</label>
-                    <div id="classicPreviewContent" style="max-height: 200px;overflow-y: auto;padding: 12px;background: #f7fafc;border-radius: 6px;font-size: 13px;color: #4a5568;">
+                    <div style="display: flex;justify-content: space-between;align-items: center;margin-bottom: 10px;">
+                        <label style="font-weight: bold;color: #4a5568;" data-i18n="previewContentLabel">预览内容：</label>
+                        <div>
+                            <button onclick="selectAllClassicLinks(true)" style="padding: 4px 12px;background: #4299e1;color: white;border: none;border-radius: 4px;cursor: pointer;font-size: 12px;margin-right: 5px;" data-i18n="selectAll">全选</button>
+                            <button onclick="selectAllClassicLinks(false)" style="padding: 4px 12px;background: #e2e8f0;color: #4a5568;border: none;border-radius: 4px;cursor: pointer;font-size: 12px;" data-i18n="deselectAll">取消全选</button>
+                        </div>
+                    </div>
+                    <div id="classicPreviewContent" style="max-height: 300px;overflow-y: auto;padding: 12px;background: #f7fafc;border-radius: 6px;font-size: 13px;color: #4a5568;">
+                    </div>
+                    <div id="selectedCountInfo" style="margin-top: 8px;padding: 8px;background: #ebf8ff;border-radius: 4px;font-size: 13px;color: #2b6cb0;display: none;">
                     </div>
                 </div>
             </div>
@@ -449,7 +457,10 @@
                 jsonFormatErrorMessage: '❌ JSON 格式错误：',
                 htmlFormatErrorInvalid: '❌ HTML 格式错误：不是有效的 Chrome/Edge 书签格式（缺少 DOCTYPE 声明）',
                 htmlFormatErrorIncomplete: '❌ HTML 格式错误：书签结构不完整（缺少必要的 DL/DT/A 标签）',
-                formatCorrectInputChars: '✅ {format} 格式正确 - 已输入 {chars} 个字符'
+                formatCorrectInputChars: '✅ {format} 格式正确 - 已输入 {chars} 个字符',
+                selectAll: '全选',
+                deselectAll: '取消全选',
+                selected: '已选择'
             },
             en: {
                 pageTitle: 'My Bookmarks',
@@ -577,7 +588,10 @@
                 jsonFormatErrorMessage: '❌ JSON Format Error: ',
                 htmlFormatErrorInvalid: '❌ HTML Format Error: Not a valid Chrome/Edge bookmark format (missing DOCTYPE declaration)',
                 htmlFormatErrorIncomplete: '❌ HTML Format Error: Incomplete bookmark structure (missing required DL/DT/A tags)',
-                formatCorrectInputChars: '✅ {format} format correct - {chars} characters entered'
+                formatCorrectInputChars: '✅ {format} format correct - {chars} characters entered',
+                selectAll: 'Select All',
+                deselectAll: 'Deselect All',
+                selected: 'Selected'
             }
         };
         
@@ -2574,23 +2588,26 @@
                     return;
                 }
                 
-                // 提取所有的 links
-                let allLinks = [];
-                if (data.tabs && Array.isArray(data.tabs)) {
-                    data.tabs.forEach(tab => {
-                        if (tab.links && Array.isArray(tab.links)) {
-                            allLinks = allLinks.concat(tab.links);
-                        }
-                    });
-                }
+                // 获取选中的链接
+                const selectedCheckboxes = document.querySelectorAll('.link-checkbox:checked');
+                let selectedLinks = [];
                 
-                if (allLinks.length === 0) {
-                    showToast('该主题下没有可导入的书签', 'error');
+                selectedCheckboxes.forEach(checkbox => {
+                    const tabIndex = parseInt(checkbox.dataset.tab);
+                    const linkIndex = parseInt(checkbox.dataset.link);
+                    
+                    if (data.tabs && data.tabs[tabIndex] && data.tabs[tabIndex].links && data.tabs[tabIndex].links[linkIndex]) {
+                        selectedLinks.push(data.tabs[tabIndex].links[linkIndex]);
+                    }
+                });
+                
+                if (selectedLinks.length === 0) {
+                    showToast('请至少选择一个书签', 'error');
                     return;
                 }
                 
                 // 确认导入
-                customConfirm(`${t('confirmImport')} ${allLinks.length} ${t('bookmarks')}？${t('willMergeWithExisting')}`, async (confirmed) => {
+                customConfirm(`${t('confirmImport')} ${selectedLinks.length} ${t('bookmarks')}？${t('willMergeWithExisting')}`, async (confirmed) => {
                     if (!confirmed) {
                         return;
                     }
@@ -2607,7 +2624,7 @@
                             },
                             body: JSON.stringify({
                                 tabId: targetTabId,
-                                links: allLinks
+                                links: selectedLinks
                             })
                         });
                         
@@ -3452,26 +3469,45 @@
                     // 解析 JSON 字符串
                     const data = JSON.parse(result.data);
                     
-                    // 显示预览
+                    // 显示预览，带复选框
                     let previewHTML = '';
+                    let totalLinks = 0;
+                    
                     if (data.tabs && data.tabs.length > 0) {
-                        data.tabs.forEach(tab => {
+                        data.tabs.forEach((tab, tabIndex) => {
                             const siteCount = tab.links ? tab.links.length : 0;
-                            previewHTML += `<div style="margin-bottom: 10px;"><strong>${tab.name}</strong> (${siteCount} ${t('sitesCount')})</div>`;
+                            totalLinks += siteCount;
+                            
+                            previewHTML += `<div style="margin-bottom: 15px;">`;
+                            previewHTML += `<div style="margin-bottom: 8px;font-weight: bold;color: #2d3748;">`;
+                            previewHTML += `<input type="checkbox" id="tab-checkbox-${tabIndex}" checked onchange="toggleTabLinks(${tabIndex})" style="margin-right: 8px;width: 16px;height: 16px;cursor: pointer;">`;
+                            previewHTML += `${tab.name} (${siteCount} ${t('sitesCount')})`;
+                            previewHTML += `</div>`;
+                            
                             if (tab.links && tab.links.length > 0) {
-                                tab.links.forEach(link => {
-                                    previewHTML += `<div style="margin-left: 20px;font-size: 12px;color: #4a5568;">• ${link.name}</div>`;
+                                previewHTML += `<div style="margin-left: 24px;">`;
+                                tab.links.forEach((link, linkIndex) => {
+                                    previewHTML += `<div style="margin-bottom: 6px;display: flex;align-items: center;">`;
+                                    previewHTML += `<input type="checkbox" class="link-checkbox" data-tab="${tabIndex}" data-link="${linkIndex}" checked onchange="updateSelectedCount()" style="margin-right: 8px;width: 14px;height: 14px;cursor: pointer;">`;
+                                    previewHTML += `<span style="color: #4a5568;font-size: 13px;">• ${link.name}</span>`;
+                                    previewHTML += `</div>`;
                                 });
+                                previewHTML += `</div>`;
                             }
+                            previewHTML += `</div>`;
                         });
                     }
-                    previewContent.innerHTML = previewHTML;
                     
-                    // 加载选项卡列表
-                    await loadUnifiedImportTabSelect();
+                    previewContent.innerHTML = previewHTML;
                     
                     // 保存数据供导入使用
                     window.classicImportData = data;
+                    
+                    // 更新选中数量
+                    updateSelectedCount();
+                    
+                    // 加载选项卡列表
+                    await loadUnifiedImportTabSelect();
                 } else {
                     previewContent.innerHTML = `<div style="text-align: center;color: #e53e3e;">${t('loadFailed')}</div>`;
                     showToast(t('loadFailed'), 'error');
@@ -3480,6 +3516,59 @@
                 console.error('Load classic bookmarks error:', error);
                 previewContent.innerHTML = `<div style="text-align: center;color: #e53e3e;">${t('loadFailed')}</div>`;
                 showToast(t('loadFailed') + '：' + error.message, 'error');
+            }
+        }
+        
+        // 切换整个Tab的选中状态
+        function toggleTabLinks(tabIndex) {
+            const tabCheckbox = document.getElementById(`tab-checkbox-${tabIndex}`);
+            const isChecked = tabCheckbox.checked;
+            const linkCheckboxes = document.querySelectorAll(`.link-checkbox[data-tab="${tabIndex}"]`);
+            
+            linkCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+            
+            updateSelectedCount();
+        }
+        
+        // 全选/取消全选
+        function selectAllClassicLinks(selectAll) {
+            const allCheckboxes = document.querySelectorAll('.link-checkbox');
+            const allTabCheckboxes = document.querySelectorAll('[id^="tab-checkbox-"]');
+            
+            allCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAll;
+            });
+            
+            allTabCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAll;
+            });
+            
+            updateSelectedCount();
+        }
+        
+        // 更新选中数量显示
+        function updateSelectedCount() {
+            const selectedCheckboxes = document.querySelectorAll('.link-checkbox:checked');
+            const totalCheckboxes = document.querySelectorAll('.link-checkbox');
+            const selectedCount = selectedCheckboxes.length;
+            const totalCount = totalCheckboxes.length;
+            
+            const countInfo = document.getElementById('selectedCountInfo');
+            countInfo.textContent = `${t('selected')} ${selectedCount} / ${totalCount} ${t('bookmarks')}`;
+            countInfo.style.display = 'block';
+            
+            // 启用或禁用开始导入按钮
+            const startBtn = document.getElementById('startImportBtn');
+            if (selectedCount > 0) {
+                startBtn.disabled = false;
+                startBtn.style.opacity = '1';
+                startBtn.style.cursor = 'pointer';
+            } else {
+                startBtn.disabled = true;
+                startBtn.style.opacity = '0.5';
+                startBtn.style.cursor = 'not-allowed';
             }
         }
     </script>
