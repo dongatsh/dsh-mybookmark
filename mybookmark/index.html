@@ -2301,6 +2301,9 @@
                     return;
                 }
                 
+                // 获取当前选中的选项卡 ID
+                const currentTabId = localStorage.getItem('currentTabId');
+                
                 // 填充选项卡列表
                 select.innerHTML = '';
                 tabs.forEach(tab => {
@@ -2308,8 +2311,19 @@
                     option.value = tab.id;
                     const siteCount = tab.links ? tab.links.length : 0;
                     option.textContent = `${tab.name} (${siteCount} ${t('sitesCount')})`;
+                    
+                    // 如果是当前激活的选项卡，设置为选中状态
+                    if (tab.id === currentTabId) {
+                        option.selected = true;
+                    }
+                    
                     select.appendChild(option);
                 });
+                
+                // 如果没有找到匹配的选项卡（比如首次打开），默认选中第一个
+                if (!select.value && tabs.length > 0) {
+                    select.value = tabs[0].id;
+                }
                 
                 // 显示选项卡选择区域
                 tabSection.style.display = 'block';
