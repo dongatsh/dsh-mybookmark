@@ -57,6 +57,10 @@ body {max-width: 1200px;margin: 30px auto;padding: 0 20px;background: #f5f7fa;}
     .tab-item {
         padding: 10px 16px;
         font-size: 13px;
+        height: 40px;
+    }
+    .tab-header {
+        flex-wrap: wrap;
     }
     .tab-count {
         display: none;
@@ -334,9 +338,9 @@ button:hover {background: #3182ce;}
 
 /* Tab Styles - Traditional Style */
 .tab-container {margin-bottom: 0;}
-.tab-header {display: flex;align-items: flex-end;gap: 2px;background: transparent;padding: 0 15px;border-bottom: 2px solid #e2e8f0;overflow-x: auto;scrollbar-width: none;-ms-overflow-style: none;}
+.tab-header {display: flex;flex-wrap: wrap;align-items: stretch;gap: 2px;background: transparent;padding: 0 15px;border-bottom: 2px solid #e2e8f0;overflow-x: auto;scrollbar-width: none;-ms-overflow-style: none;}
 .tab-header::-webkit-scrollbar {display: none;}
-.tab-item {padding: 12px 24px;background: #e2e8f0;border-radius: 8px 8px 0 0;cursor: pointer;font-size: 14px;color: #4a5568;transition: all 0.3s;white-space: nowrap;display: flex;align-items: center;gap: 8px;user-select: none;border: 1px solid #cbd5e0;border-bottom: none;margin-bottom: -2px;position: relative;}
+.tab-item {padding: 12px 24px;background: #e2e8f0;border-radius: 8px 8px 0 0;cursor: pointer;font-size: 14px;color: #4a5568;transition: all 0.3s;white-space: nowrap;display: flex;align-items: center;gap: 8px;user-select: none;border: 1px solid #cbd5e0;border-bottom: none;margin-bottom: -2px;position: relative;height: 44px;box-sizing: border-box;}
 .tab-item:hover {background: #cbd5e0;}
 .tab-item.active {background: #fff;color: #2d3748;border-color: #e2e8f0;font-weight: bold;z-index: 1;box-shadow: 0 -2px 8px rgba(66, 153, 225, 0.15);}
 .tab-item.active .tab-active-icon {display: inline-block;}
@@ -347,10 +351,10 @@ button:hover {background: #3182ce;}
 .tab-name:hover {background: rgba(0,0,0,0.1);}
 .tab-count {font-size: 12px;color: #718096;margin-left: 4px;}
 .tab-item.active .tab-count {color: #4a5568;}
-.tab-name-input {padding: 2px 5px;font-size: 14px;border: 1px solid #4299e1;border-radius: 3px;outline: none;width: 100px;}
+.tab-name-input {padding: 2px 5px;font-size: 14px;border: 1px solid #4299e1;border-radius: 3px;outline: none;width: 100px;height: 24px;line-height: 20px;box-sizing: border-box;}
 .tab-close {width: 18px;height: 18px;border-radius: 50%;display: flex;align-items: center;justify-content: center;font-size: 12px;transition: background 0.2s;margin-left: 5px;}
 .tab-close:hover {background: rgba(0,0,0,0.2);color: #fff;}
-.add-tab-btn {padding: 12px 20px;background: transparent;color: #4299e1;border: 2px dashed #cbd5e0;border-radius: 8px 8px 0 0;cursor: pointer;font-size: 14px;white-space: nowrap;margin-bottom: -2px;}
+.add-tab-btn {padding: 12px 20px;background: transparent;color: #4299e1;border: 2px dashed #cbd5e0;border-radius: 8px 8px 0 0;cursor: pointer;font-size: 14px;white-space: nowrap;margin-bottom: -2px;height: 44px;box-sizing: border-box;display: flex;align-items: center;}
 .add-tab-btn:hover {background: #ebf8ff;border-color: #4299e1;}
 
 /* Footer Copyright */

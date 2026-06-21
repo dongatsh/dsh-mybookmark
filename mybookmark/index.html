@@ -1069,8 +1069,8 @@
             const tabs = data.tabs || [];
             
             // 检查是否已达到最大数量
-            if (tabs.length >= 5) {
-                showToast('最多只能创建5个选项卡', 'warning');
+            if (tabs.length >= 20) {
+                showToast('最多只能创建20个选项卡', 'warning');
                 return;
             }
             
