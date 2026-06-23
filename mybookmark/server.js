@@ -258,6 +258,11 @@ function writeSystemConfig(key, value) {
   }
 }
 
+// MD5 哈希函数
+function md5Hash(str) {
+  return crypto.createHash('md5').update(str).digest('hex');
+}
+
 // 格式化时间戳 [yyyy-MM-dd HH:mm:ss]
 function formatTimestamp() {
   const now = new Date();
@@ -1679,7 +1684,9 @@ const server = http.createServer((req, res) => {
       const systemConfig = readSystemConfig();
       res.end(JSON.stringify({ 
         code: 0, 
-        debug: systemConfig.debug === 'true'
+        debug: systemConfig.debug === 'true',
+        locked: systemConfig.locked === 'true',
+        hasPassword: !!systemConfig.password // 是否有密码
       }));
     } catch (err) {
       res.statusCode = 500;
@@ -1772,18 +1779,83 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       try {
-        const { debug } = JSON.parse(body);
-        debugLog('Saving system config:', { debug });
+        const { debug, locked, password, oldPassword, newPassword } = JSON.parse(body);
+        debugLog('Saving system config:', { debug, locked, hasPassword: !!password, hasOldPassword: !!oldPassword, hasNewPassword: !!newPassword });
         
         // 将 debug 设置保存到 setting.ini
         if (debug !== undefined) {
           writeSystemConfig('debug', debug === true || debug === 'true' ? 'true' : 'false');
         }
         
+        // 处理密码相关操作
+        if (password !== undefined) {
+          // 直接设置密码（MD5哈希）
+          const hashedPassword = password ? md5Hash(password) : '';
+          writeSystemConfig('password', hashedPassword);
+          debugLog('Password updated');
+        }
+        
+        if (oldPassword !== undefined && newPassword !== undefined) {
+          // 验证旧密码并设置新密码
+          const systemConfig = readSystemConfig();
+          const storedPassword = systemConfig.password || '';
+          const hashedOldPassword = md5Hash(oldPassword);
+          
+          if (storedPassword && hashedOldPassword !== storedPassword) {
+            res.statusCode = 403;
+            res.end(JSON.stringify({ code: 1, message: '旧密码不正确' }));
+            return;
+          }
+          
+          // 设置新密码
+          const hashedNewPassword = newPassword ? md5Hash(newPassword) : '';
+          writeSystemConfig('password', hashedNewPassword);
+          debugLog('Password changed from old to new');
+        }
+        
+        // 将 locked 设置保存到 setting.ini
+        if (locked !== undefined) {
+          writeSystemConfig('locked', locked === true || locked === 'true' ? 'true' : 'false');
+        }
+        
         debugLog('System config saved successfully');
         res.end(JSON.stringify({ code: 0 }));
       } catch (err) {
         logError('Save system config error:', err);
+        res.statusCode = 500;
+        res.end(JSON.stringify({ code: 1, message: 'Server error' }));
+      }
+    });
+    return;
+  }
+
+  // 验证密码
+  if (pathname === '/api/verifyPassword' && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json;charset=utf-8');
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const { password } = JSON.parse(body);
+        const systemConfig = readSystemConfig();
+        const storedPassword = systemConfig.password || '';
+        
+        // 如果没有设置密码，任何密码都通过
+        if (!storedPassword) {
+          res.end(JSON.stringify({ code: 0, valid: true }));
+          return;
+        }
+        
+        const hashedPassword = md5Hash(password);
+        const isValid = hashedPassword === storedPassword;
+        
+        res.end(JSON.stringify({ 
+          code: 0, 
+          valid: isValid,
+          message: isValid ? '密码正确' : '密码错误'
+        }));
+      } catch (err) {
+        logError('Verify password error:', err);
         res.statusCode = 500;
         res.end(JSON.stringify({ code: 1, message: 'Server error' }));
       }

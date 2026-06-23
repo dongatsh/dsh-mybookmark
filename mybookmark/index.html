@@ -28,8 +28,9 @@
                 <div style="display: flex;gap: 8px;flex-shrink: 0;">
                     <button onclick="openAddModal()" class="toolbar-icon-btn" title="添加收藏" data-i18n-title="addBookmark">➕</button>
                     <button onclick="openSettingsModal()" class="toolbar-icon-btn toolbar-settings-btn" title="设置" data-i18n-title="settings">⚙️</button>
+                    <button onclick="toggleLockMode()" class="toolbar-icon-btn" id="lockBtn" title="锁定模式" data-i18n-title="lockMode">🔓</button>
                     <button onclick="exportData()" class="toolbar-icon-btn toolbar-export-btn" title="导出数据" data-i18n-title="exportData">📤</button>
-                    <button onclick="openImportTypeModal()" class="toolbar-icon-btn toolbar-import-btn" title="导入数据" data-i18n-title="importData">📥</button>
+                    <button onclick="openImportTypeModal()" class="toolbar-icon-btn toolbar-import-btn" id="importBtn" title="导入数据" data-i18n-title="importData">📥</button>
                     <input type="file" id="importFile" accept=".json,.html" style="display:none" onchange="handleImportFile(event)">
                 </div>
             </div>
@@ -328,6 +329,46 @@
         </div>
     </div>
 
+    <!-- Password Modal -->
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal" style="max-width: 450px;">
+            <h3 id="passwordModalTitle" data-i18n="enterPassword">请输入密码</h3>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" id="passwordInputLabel" data-i18n="passwordPlaceholder">密码：</label>
+                <input type="password" class="modal-input" id="passwordInput" data-i18n-placeholder="passwordPlaceholder" placeholder="请输入密码">
+            </div>
+            
+            <div id="enableNewPasswordSection" style="display: none;margin-bottom: 15px;">
+                <label style="display: flex;align-items: center;gap: 8px;cursor: pointer;">
+                    <input type="checkbox" id="enableNewPasswordCheckbox" onchange="toggleNewPasswordFields()">
+                    <span data-i18n="enableNewPassword">启用新密码</span>
+                </label>
+            </div>
+            
+            <div id="oldPasswordSection" style="display: none;margin-bottom: 15px;">
+                <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" data-i18n="passwordPlaceholder">旧密码：</label>
+                <input type="password" class="modal-input" id="oldPasswordInput" data-i18n-placeholder="passwordPlaceholder" placeholder="请输入旧密码">
+            </div>
+            
+            <div id="newPasswordSection" style="display: none;">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" data-i18n="newPasswordPlaceholder">新密码（可选）：</label>
+                    <input type="password" class="modal-input" id="newPasswordInput" data-i18n-placeholder="newPasswordPlaceholder" placeholder="留空则不设置密码">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" data-i18n="confirmPasswordPlaceholder">确认新密码：</label>
+                    <input type="password" class="modal-input" id="confirmPasswordInput" data-i18n-placeholder="confirmPasswordPlaceholder" placeholder="请再次输入新密码">
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="cancel-btn" onclick="closePasswordModal()" data-i18n="cancel">取消</button>
+                <button class="save-btn" id="passwordConfirmBtn" onclick="confirmPasswordAction()" data-i18n="confirm">确定</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 语言配置
         const i18n = {
@@ -428,6 +469,20 @@
                 confirmLock: '确定要锁定此卡片吗？锁定后只能点击打开网站。',
                 confirmUnlock: '确定要解锁此卡片吗？解锁后可以编辑和拖动卡片。',
                 lockedCardTip: '卡片已锁定',
+                lockMode: '锁定模式',
+                unlockMode: '解锁模式',
+                lockedModeTip: '当前处于锁定模式，无法修改内容',
+                enterPassword: '请输入密码',
+                lockTitle: '设置锁定',
+                unlockTitle: '解锁验证',
+                passwordPlaceholder: '密码',
+                newPasswordPlaceholder: '新密码（可选）',
+                confirmPasswordPlaceholder: '确认新密码',
+                enableNewPassword: '启用新密码',
+                oldPasswordIncorrect: '旧密码不正确',
+                passwordSetSuccess: '密码设置成功',
+                passwordVerifyFailed: '密码验证失败',
+                passwordsNotMatch: '两次输入的密码不一致',
                 importMethodLabel: '选择导入方式：',
                 importFromFile: '📁 从文件导入',
                 importFromText: '📋 输入内容',
@@ -559,6 +614,20 @@
                 confirmLock: 'Are you sure to lock this card? After locking, you can only click to open the website.',
                 confirmUnlock: 'Are you sure to unlock this card? After unlocking, you can edit and drag the card.',
                 lockedCardTip: 'Card is locked',
+                lockMode: 'Lock Mode',
+                unlockMode: 'Unlock Mode',
+                lockedModeTip: 'Currently in lock mode, cannot modify content',
+                enterPassword: 'Enter Password',
+                lockTitle: 'Set Lock',
+                unlockTitle: 'Unlock Verification',
+                passwordPlaceholder: 'Password',
+                newPasswordPlaceholder: 'New Password (Optional)',
+                confirmPasswordPlaceholder: 'Confirm New Password',
+                enableNewPassword: 'Enable New Password',
+                oldPasswordIncorrect: 'Old password is incorrect',
+                passwordSetSuccess: 'Password set successfully',
+                passwordVerifyFailed: 'Password verification failed',
+                passwordsNotMatch: 'Passwords do not match',
                 importMethodLabel: 'Select Import Method:',
                 importFromFile: '📁 Import from File',
                 importFromText: '📋 Input Content',
@@ -654,9 +723,298 @@
             return text;
         }
         
+        // 切换锁定模式
+        async function toggleLockMode() {
+            try {
+                const newLockState = !isLockMode;
+                
+                console.log('toggleLockMode called, newLockState:', newLockState);
+                
+                // 重新获取最新的系统配置，确保 hasPassword 是最新的
+                try {
+                    const response = await fetch('/api/getSystemConfig');
+                    const result = await response.json();
+                    if (result.code === 0) {
+                        hasPassword = result.hasPassword || false;
+                        console.log('Current hasPassword status:', hasPassword);
+                    }
+                } catch (error) {
+                    console.error('Failed to get system config:', error);
+                }
+                
+                // 根据操作类型决定
+                if (newLockState) {
+                    // 锁定时，总是显示密码对话框（可以设置新密码）
+                    console.log('Showing password modal for lock action');
+                    showPasswordModal('lock', newLockState);
+                } else {
+                    // 解锁时，如果有密码需要验证，如果没有密码直接解锁
+                    if (hasPassword) {
+                        console.log('Showing password modal for unlock action');
+                        showPasswordModal('unlock', newLockState);
+                    } else {
+                        // 没有密码，直接解锁
+                        console.log('No password, applying lock state directly');
+                        await applyLockState(newLockState);
+                    }
+                }
+            } catch (error) {
+                console.error('Error in toggleLockMode:', error);
+                showToast('操作失败：' + error.message, 'error');
+            }
+        }
+        
+        // 应用锁定状态
+        async function applyLockState(lockState, newPassword = null) {
+            console.log('applyLockState called with lockState:', lockState, 'newPassword:', newPassword);
+            
+            isLockMode = lockState;
+            const lockBtn = document.getElementById('lockBtn');
+            const importBtn = document.getElementById('importBtn');
+            
+            console.log('isLockMode set to:', isLockMode);
+            
+            if (isLockMode) {
+                // 进入锁定模式
+                lockBtn.textContent = '🔒';
+                lockBtn.setAttribute('data-i18n-title', 'unlockMode');
+                lockBtn.title = t('unlockMode');
+                importBtn.disabled = true;
+                importBtn.style.opacity = '0.5';
+                importBtn.style.cursor = 'not-allowed';
+                showToast(t('lockedModeTip'), 'info');
+            } else {
+                // 退出锁定模式
+                lockBtn.textContent = '🔓';
+                lockBtn.setAttribute('data-i18n-title', 'lockMode');
+                lockBtn.title = t('lockMode');
+                importBtn.disabled = false;
+                importBtn.style.opacity = '1';
+                importBtn.style.cursor = 'pointer';
+            }
+            
+            // 保存锁定状态到服务器
+            try {
+                const saveData = { locked: isLockMode };
+                
+                // 如果有新密码，一并保存
+                if (newPassword !== null) {
+                    saveData.password = newPassword;
+                }
+                
+                console.log('Saving system config:', saveData);
+                await fetch('/api/saveSystemConfig', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(saveData)
+                });
+                console.log('System config saved');
+                
+                // 更新 hasPassword 状态
+                if (newPassword !== null) {
+                    hasPassword = newPassword.length > 0;
+                    console.log('hasPassword updated to:', hasPassword);
+                }
+            } catch (error) {
+                console.error('Failed to save lock state:', error);
+                showToast(t('passwordVerifyFailed'), 'error');
+                return;
+            }
+            
+            // 重新加载选项卡以应用锁定状态
+            console.log('Reloading tabs and links');
+            loadTabs();
+            // 重新加载链接列表以应用锁定状态
+            loadLinks();
+            console.log('applyLockState completed successfully');
+        }
+        
+        // 显示密码对话框
+        function showPasswordModal(action, lockState) {
+            console.log('showPasswordModal called with action:', action, 'lockState:', lockState);
+            console.log('Before setting - pendingLockState:', pendingLockState);
+            
+            passwordAction = action;
+            pendingLockState = lockState;
+            
+            console.log('After setting - pendingLockState:', pendingLockState);
+            
+            const modal = document.getElementById('passwordModal');
+            console.log('Modal element:', modal);
+            
+            if (!modal) {
+                console.error('Password modal not found!');
+                return;
+            }
+            
+            const title = document.getElementById('passwordModalTitle');
+            const oldPasswordSection = document.getElementById('oldPasswordSection');
+            const passwordInputSection = document.getElementById('passwordInput').parentElement;
+            const enableNewPasswordSection = document.getElementById('enableNewPasswordSection');
+            const newPasswordSection = document.getElementById('newPasswordSection');
+            const enableNewPasswordCheckbox = document.getElementById('enableNewPasswordCheckbox');
+            
+            // 清空输入框
+            document.getElementById('oldPasswordInput').value = '';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('newPasswordInput').value = '';
+            document.getElementById('confirmPasswordInput').value = '';
+            enableNewPasswordCheckbox.checked = false;
+            
+            if (action === 'lock') {
+                // 锁定操作：默认只显示"启用新密码"复选框
+                title.textContent = t('lockTitle');
+                oldPasswordSection.style.display = 'none';
+                passwordInputSection.style.display = 'none';
+                enableNewPasswordSection.style.display = 'block';
+                newPasswordSection.style.display = 'none';
+            } else {
+                // 解锁操作
+                title.textContent = t('unlockTitle');
+                oldPasswordSection.style.display = 'none';
+                passwordInputSection.style.display = 'block'; // 显示通用密码输入框
+                enableNewPasswordSection.style.display = 'none';
+                newPasswordSection.style.display = 'none';
+            }
+            
+            toggleNewPasswordFields();
+            modal.style.display = 'flex';
+            console.log('Modal display set to:', modal.style.display);
+        }
+        
+        // 切换旧密码字段显示（用于锁定对话框）
+        function toggleOldPasswordField() {
+            const enableNewPassword = document.getElementById('enableNewPasswordCheckbox').checked;
+            const oldPasswordSection = document.getElementById('oldPasswordSection');
+            
+            // 如果启用了新密码且当前有密码，则显示旧密码输入框
+            if (enableNewPassword && hasPassword) {
+                oldPasswordSection.style.display = 'block';
+            } else {
+                oldPasswordSection.style.display = 'none';
+            }
+        }
+        
+        // 关闭密码对话框
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+            passwordAction = null;
+            pendingLockState = false;
+        }
+        
+        // 切换新密码字段显示
+        function toggleNewPasswordFields() {
+            const enabled = document.getElementById('enableNewPasswordCheckbox').checked;
+            const newPasswordSection = document.getElementById('newPasswordSection');
+            
+            if (enabled) {
+                newPasswordSection.style.display = 'block';
+            } else {
+                newPasswordSection.style.display = 'none';
+            }
+            
+            // 同时更新旧密码字段的显示状态
+            toggleOldPasswordField();
+        }
+        
+        // 确认密码操作
+        async function confirmPasswordAction() {
+            console.log('confirmPasswordAction called, passwordAction:', passwordAction);
+            console.log('Current pendingLockState:', pendingLockState);
+            
+            if (passwordAction === 'unlock') {
+                // 解锁操作：验证密码
+                const password = document.getElementById('passwordInput').value;
+                
+                if (!password) {
+                    showToast(t('enterPassword'), 'warning');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/verifyPassword', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password })
+                    });
+                    const result = await response.json();
+                    
+                    if (result.code === 0 && result.valid) {
+                        console.log('Password verified, applying lock state:', pendingLockState);
+                        const targetLockState = pendingLockState; // 保存 pendingLockState 的值
+                        closePasswordModal();
+                        await applyLockState(targetLockState);
+                    } else {
+                        showToast(result.message || t('passwordVerifyFailed'), 'error');
+                    }
+                } catch (error) {
+                    console.error('Verify password error:', error);
+                    showToast(t('passwordVerifyFailed'), 'error');
+                }
+            } else if (passwordAction === 'lock') {
+                // 锁定操作
+                console.log('Lock action, hasPassword:', hasPassword);
+                let newPassword = null;
+                
+                // 检查是否启用新密码
+                const enableNewPassword = document.getElementById('enableNewPasswordCheckbox').checked;
+                console.log('enableNewPassword:', enableNewPassword);
+                
+                if (enableNewPassword) {
+                    // 如果当前有密码，需要先验证旧密码
+                    if (hasPassword) {
+                        const oldPassword = document.getElementById('oldPasswordInput').value;
+                        if (!oldPassword) {
+                            showToast(t('enterPassword'), 'warning');
+                            return;
+                        }
+                        
+                        try {
+                            const response = await fetch('/api/verifyPassword', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ password: oldPassword })
+                            });
+                            const result = await response.json();
+                            
+                            if (result.code !== 0 || !result.valid) {
+                                showToast(t('oldPasswordIncorrect'), 'error');
+                                return;
+                            }
+                            console.log('Old password verified successfully');
+                        } catch (error) {
+                            console.error('Verify old password error:', error);
+                            showToast(t('passwordVerifyFailed'), 'error');
+                            return;
+                        }
+                    }
+                    
+                    const newPwd = document.getElementById('newPasswordInput').value;
+                    const confirmPwd = document.getElementById('confirmPasswordInput').value;
+                    
+                    // 新密码可以为空（表示清除密码）
+                    if (newPwd !== confirmPwd) {
+                        showToast(t('passwordsNotMatch'), 'error');
+                        return;
+                    }
+                    
+                    newPassword = newPwd; // 可以是空字符串
+                    console.log('New password set (can be empty):', newPassword ? 'has value' : 'empty (will clear password)');
+                }
+                
+                console.log('Closing modal and applying lock state:', pendingLockState, 'newPassword:', newPassword);
+                const targetLockState = pendingLockState; // 保存 pendingLockState 的值
+                closePasswordModal();
+                await applyLockState(targetLockState, newPassword);
+                console.log('applyLockState completed');
+            }
+        }
+        
         // 页面加载读取数据
         window.onload = async function() {
             await loadConstants();
+            // 加载系统配置（包括锁定状态）
+            await loadSystemConfig();
             // 先加载 Tabs，确保 currentTabId 被正确初始化
             await loadTabs();
             loadTitle();
@@ -710,6 +1068,35 @@
             }
         }
 
+        // 加载系统配置（包括锁定状态）
+        async function loadSystemConfig() {
+            try {
+                const response = await fetch('/api/getSystemConfig');
+                const result = await response.json();
+                
+                if (result.code === 0) {
+                    // 恢复锁定状态
+                    hasPassword = result.hasPassword || false;
+                    
+                    if (result.locked === true) {
+                        isLockMode = true;
+                        const lockBtn = document.getElementById('lockBtn');
+                        const importBtn = document.getElementById('importBtn');
+                        
+                        // 更新按钮状态
+                        lockBtn.textContent = '🔒';
+                        lockBtn.setAttribute('data-i18n-title', 'unlockMode');
+                        lockBtn.title = t('unlockMode');
+                        importBtn.disabled = true;
+                        importBtn.style.opacity = '0.5';
+                        importBtn.style.cursor = 'not-allowed';
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load system config:', error);
+            }
+        }
+
         let currentEditId = null;
         let draggedElement = null;
         let draggedLinkId = null; // 保存被拖动的站点 ID
@@ -720,6 +1107,10 @@
         let nextTabNumber = 2; // Tab 序号计数器
         let confirmCallback = null;
         let promptCallback = null;
+        let isLockMode = false; // 锁定模式状态
+        let hasPassword = false; // 是否设置了密码
+        let passwordAction = null; // 当前密码操作类型：'lock' 或 'unlock'
+        let pendingLockState = false; // 待处理的锁定状态
 
         // 生成随机 ID（16位十六进制字符串）
         function generateRandomId() {
@@ -759,7 +1150,8 @@
                 const iconClass = currentIconSize === 'small' ? 'small' : currentIconSize;
                 const smallIconMode = currentIconSize === 'small' ? 'small-icon-mode' : '';
                 const noIconClass = ''; // 不再使用 no-icon 类
-                const isLocked = item.locked === true; // 检查是否锁定
+                const isCardLocked = item.locked === true; // 检查卡片是否单独锁定
+                const isLocked = isLockMode || isCardLocked; // 全局锁定模式或卡片单独锁定
                 
                 if (currentIconSize === 'small') {
                     // 小图标模式：横向布局
@@ -900,7 +1292,7 @@
                 const closeBtn = tabs.length > 1 ? `<span class="tab-close" onclick="deleteTab('${tab.id}', event)">×</span>` : '';
                 const siteCount = tab.links ? tab.links.length : 0;
                 html += `
-                    <div class="tab-item ${activeClass}" draggable="true" data-tab-id="${tab.id}"
+                    <div class="tab-item ${activeClass}" draggable="${!isLockMode}" data-tab-id="${tab.id}"
                          ondragstart="handleTabDragStart(event)"
                          ondragend="handleTabDragEnd(event)"
                          ondragover="handleTabDragOver(event)"
@@ -949,6 +1341,11 @@
 
         // 开始编辑 Tab 名称
         function startEditTabName(tabId, element) {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             const currentName = element.textContent;
             
             // 创建容器
@@ -1030,12 +1427,19 @@
             const span = document.createElement('span');
             span.className = 'tab-name';
             span.textContent = name;
-            span.setAttribute('ondblclick', `startEditTabName('${tabId}', this)`);
+            if (!isLockMode) {
+                span.setAttribute('ondblclick', `startEditTabName('${tabId}', this)`);
+            }
             return span;
         }
 
         // 更新 Tab 名称
         async function updateTabName(tabId, newName) {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             try {
                 await fetch('/api/updateTabName', {
                     method: 'POST',
@@ -1064,6 +1468,11 @@
 
         // 添加 Tab
         async function addTab() {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             const res = await fetch('/api/get');
             const data = await res.json();
             const tabs = data.tabs || [];
@@ -1127,6 +1536,11 @@
 
         // 删除 Tab
         async function deleteTab(tabId, event) {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             event.stopPropagation();
             
             customConfirm(t('confirmDeleteTab'), async (confirmed) => {
@@ -1326,6 +1740,11 @@
 
         // 打开添加弹窗
         function openAddModal() {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             document.getElementById('addName').value = '';
             document.getElementById('addUrl').value = '';
             document.getElementById('addNote').value = ''; // 清空备注字段
@@ -1365,6 +1784,11 @@
 
         // 保存添加的链接
         async function saveAddLink() {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             let name = document.getElementById('addName').value.trim();
             let url = document.getElementById('addUrl').value.trim();
             const note = document.getElementById('addNote').value.trim();
@@ -1417,6 +1841,11 @@
 
         // 删除
         async function delLink(id) {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             customConfirm(t('deleteConfirm'), async (confirmed) => {
                 if (!confirmed) return;
                 await fetch('/api/del', {
@@ -1464,6 +1893,11 @@
 
         // 打开编辑弹窗
         async function openEditModal(id) {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             currentEditId = id;
             const res = await fetch('/api/get');
             const data = await res.json();
@@ -1495,6 +1929,11 @@
 
         // 保存编辑
         async function saveEdit() {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             let name = document.getElementById('editName').value.trim();
             let url = document.getElementById('editUrl').value.trim();
             const note = document.getElementById('editNote').value.trim();
@@ -2478,6 +2917,11 @@
         
         // 打开导入类型选择对话框
         async function openImportTypeModal() {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             document.getElementById('importTypeModal').style.display = 'flex';
             
             // 重置为文件导入方式
@@ -3089,6 +3533,11 @@
 
         // 显示移动到Tab的弹窗
         async function showMoveToTabModal(linkId) {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             movingLinkId = linkId;
             const res = await fetch('/api/get');
             const data = await res.json();
@@ -3152,6 +3601,11 @@
 
         // 打开设置弹窗
         async function openSettingsModal() {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             try {
                 // 获取配置
                 const configResponse = await fetch('/api/getConfig');
@@ -3259,6 +3713,11 @@
 
         // 刷新 Favicon
         async function refreshFavicon(linkId) {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             try {
                 const response = await fetch('/api/refreshFavicon', {
                     method: 'POST',
@@ -3284,6 +3743,11 @@
         
         // 切换卡片锁定状态
         async function toggleLockCard(linkId, lock) {
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             try {
                 if (lock) {
                     // 锁定操作，先确认
@@ -3501,8 +3965,8 @@
                             if (tab.links && tab.links.length > 0) {
                                 previewHTML += `<div style="margin-left: 24px;display: grid;grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));gap: 8px;">`;
                                 tab.links.forEach((link, linkIndex) => {
-                                    previewHTML += `<div style="display: flex;align-items: center;padding: 6px 8px;background: white;border-radius: 4px;border: 1px solid #e2e8f0;min-width: 0;">`;
-                                    previewHTML += `<input type="checkbox" class="link-checkbox" data-tab="${tabIndex}" data-link="${linkIndex}" checked onchange="updateSelectedCount()" style="margin-right: 8px;width: 14px;height: 14px;cursor: pointer;flex-shrink: 0;">`;
+                                    previewHTML += `<div style="display: flex;align-items: center;padding: 6px 8px;background: white;border-radius: 4px;border: 1px solid #e2e8f0;min-width: 0;cursor: pointer;transition: all 0.2s;" onclick="toggleLinkCheckbox(event, ${tabIndex}, ${linkIndex})" onmouseover="this.style.background='#ebf8ff';this.style.borderColor='#4299e1'" onmouseout="this.style.background='white';this.style.borderColor='#e2e8f0'">`;
+                                    previewHTML += `<input type="checkbox" class="link-checkbox" data-tab="${tabIndex}" data-link="${linkIndex}" checked onchange="updateSelectedCount()" style="margin-right: 8px;width: 14px;height: 14px;cursor: pointer;flex-shrink: 0;pointer-events: none;">`;
                                     previewHTML += `<span style="color: #4a5568;font-size: 13px;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;" title="${link.name}">${link.name}</span>`;
                                     previewHTML += `</div>`;
                                 });
@@ -3544,6 +4008,19 @@
             });
             
             updateSelectedCount();
+        }
+        
+        // 点击站点名称切换复选框状态
+        function toggleLinkCheckbox(event, tabIndex, linkIndex) {
+            // 防止事件冒泡导致重复触发
+            event.stopPropagation();
+            
+            // 查找对应的复选框
+            const checkbox = document.querySelector(`.link-checkbox[data-tab="${tabIndex}"][data-link="${linkIndex}"]`);
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+                updateSelectedCount();
+            }
         }
         
         // 全选/取消全选
