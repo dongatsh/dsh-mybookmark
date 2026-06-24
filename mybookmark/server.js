@@ -943,6 +943,21 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // JavaScript 文件
+  if (pathname === '/index.js') {
+    res.setHeader('Content-Type', 'application/javascript;charset=utf-8');
+    fs.readFile(path.join(__dirname, 'index.js'), (err, content) => {
+      if (err) {
+        res.statusCode = 404;
+        res.end('JavaScript file not found');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 缓存1天
+        res.end(content);
+      }
+    });
+    return;
+  }
+
   // 获取所有收藏
   if (pathname === '/api/get' && req.method === 'GET') {
     res.setHeader('Content-Type', 'application/json;charset=utf-8');
