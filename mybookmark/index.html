@@ -339,6 +339,10 @@
                 <input type="password" class="modal-input" id="passwordInput" data-i18n-placeholder="passwordPlaceholder" placeholder="请输入密码">
             </div>
             
+            <div style="margin-bottom: 15px;padding: 10px;background-color: #f7fafc;border-left: 3px solid #4299e1;border-radius: 4px;">
+                <p style="margin: 0;color: #4a5568;font-size: 14px;line-height: 1.6;" data-i18n="lockModeDescription">设置锁定模式后系统将不允许修改选项卡和网站，可设置密码则解锁时需验证</p>
+            </div>
+            
             <div id="enableNewPasswordSection" style="display: none;margin-bottom: 15px;">
                 <label style="display: flex;align-items: center;gap: 8px;cursor: pointer;">
                     <input type="checkbox" id="enableNewPasswordCheckbox" onchange="toggleNewPasswordFields()">
@@ -479,6 +483,7 @@
                 newPasswordPlaceholder: '新密码（可选）',
                 confirmPasswordPlaceholder: '确认新密码',
                 enableNewPassword: '启用新密码',
+                lockModeDescription: '设置锁定模式后系统将不允许修改选项卡和网站，可设置密码则解锁时需验证',
                 oldPasswordIncorrect: '旧密码不正确',
                 passwordSetSuccess: '密码设置成功',
                 passwordVerifyFailed: '密码验证失败',
@@ -624,6 +629,7 @@
                 newPasswordPlaceholder: 'New Password (Optional)',
                 confirmPasswordPlaceholder: 'Confirm New Password',
                 enableNewPassword: 'Enable New Password',
+                lockModeDescription: 'After setting lock mode, the system will not allow modification of tabs and websites. If a password is set, verification is required to unlock.',
                 oldPasswordIncorrect: 'Old password is incorrect',
                 passwordSetSuccess: 'Password set successfully',
                 passwordVerifyFailed: 'Password verification failed',
