@@ -3621,11 +3621,6 @@
 
         // 打开设置弹窗
         async function openSettingsModal() {
-            if (isLockMode) {
-                showToast(t('lockedModeTip'), 'warning');
-                return;
-            }
-            
             try {
                 // 获取配置
                 const configResponse = await fetch('/api/getConfig');
@@ -3675,6 +3670,12 @@
 
         // 保存设置
         async function saveSettings() {
+            // 检查是否处于锁定模式
+            if (isLockMode) {
+                showToast(t('lockedModeTip'), 'warning');
+                return;
+            }
+            
             const title = document.getElementById('settingTitle').value.trim();
             const debug = document.getElementById('settingDebug').checked;
             const copyright = document.getElementById('settingCopyright').value.trim();
