@@ -334,13 +334,19 @@
         <div class="modal" style="max-width: 450px;">
             <h3 id="passwordModalTitle" data-i18n="enterPassword">请输入密码</h3>
             
+            <!-- 解锁提示信息 -->
+            <div id="unlockDescriptionSection" style="display: none;margin-bottom: 15px;padding: 10px;background-color: #f0fff4;border-left: 3px solid #48bb78;border-radius: 4px;">
+                <p style="margin: 0;color: #4a5568;font-size: 14px;line-height: 1.6;" data-i18n="unlockModeDescription">解锁后可进行选项卡和网站的修改。</p>
+            </div>
+            
+            <!-- 锁定模式说明信息 -->
+            <div id="lockDescriptionSection" style="display: none;margin-bottom: 15px;padding: 10px;background-color: #f7fafc;border-left: 3px solid #4299e1;border-radius: 4px;">
+                <p style="margin: 0;color: #4a5568;font-size: 14px;line-height: 1.6;" data-i18n="lockModeDescription">设置锁定模式后系统将不允许修改选项卡和网站，可设置密码则解锁时需验证</p>
+            </div>
+            
             <div style="margin-bottom: 15px;">
                 <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" id="passwordInputLabel" data-i18n="passwordPlaceholder">密码：</label>
                 <input type="password" class="modal-input" id="passwordInput" data-i18n-placeholder="passwordPlaceholder" placeholder="请输入密码">
-            </div>
-            
-            <div style="margin-bottom: 15px;padding: 10px;background-color: #f7fafc;border-left: 3px solid #4299e1;border-radius: 4px;">
-                <p style="margin: 0;color: #4a5568;font-size: 14px;line-height: 1.6;" data-i18n="lockModeDescription">设置锁定模式后系统将不允许修改选项卡和网站，可设置密码则解锁时需验证</p>
             </div>
             
             <div id="enableNewPasswordSection" style="display: none;margin-bottom: 15px;">
@@ -484,6 +490,7 @@
                 confirmPasswordPlaceholder: '确认新密码',
                 enableNewPassword: '启用新密码',
                 lockModeDescription: '设置锁定模式后系统将不允许修改选项卡和网站，可设置密码则解锁时需验证',
+                unlockModeDescription: '解锁后可进行选项卡和网站的修改。',
                 oldPasswordIncorrect: '旧密码不正确',
                 passwordSetSuccess: '密码设置成功',
                 passwordVerifyFailed: '密码验证失败',
@@ -630,6 +637,7 @@
                 confirmPasswordPlaceholder: 'Confirm New Password',
                 enableNewPassword: 'Enable New Password',
                 lockModeDescription: 'After setting lock mode, the system will not allow modification of tabs and websites. If a password is set, verification is required to unlock.',
+                unlockModeDescription: 'After unlocking, you can modify tabs and websites.',
                 oldPasswordIncorrect: 'Old password is incorrect',
                 passwordSetSuccess: 'Password set successfully',
                 passwordVerifyFailed: 'Password verification failed',
@@ -859,6 +867,8 @@
             const enableNewPasswordSection = document.getElementById('enableNewPasswordSection');
             const newPasswordSection = document.getElementById('newPasswordSection');
             const enableNewPasswordCheckbox = document.getElementById('enableNewPasswordCheckbox');
+            const unlockDescriptionSection = document.getElementById('unlockDescriptionSection');
+            const lockDescriptionSection = document.getElementById('lockDescriptionSection');
             
             // 清空输入框
             document.getElementById('oldPasswordInput').value = '';
@@ -870,6 +880,8 @@
             if (action === 'lock') {
                 // 锁定操作：默认只显示"启用新密码"复选框
                 title.textContent = t('lockTitle');
+                unlockDescriptionSection.style.display = 'none';
+                lockDescriptionSection.style.display = 'block';
                 oldPasswordSection.style.display = 'none';
                 passwordInputSection.style.display = 'none';
                 enableNewPasswordSection.style.display = 'block';
@@ -877,6 +889,8 @@
             } else {
                 // 解锁操作
                 title.textContent = t('unlockTitle');
+                unlockDescriptionSection.style.display = 'block';
+                lockDescriptionSection.style.display = 'none';
                 oldPasswordSection.style.display = 'none';
                 passwordInputSection.style.display = 'block'; // 显示通用密码输入框
                 enableNewPasswordSection.style.display = 'none';
