@@ -209,44 +209,99 @@ function writeSystemConfig(key, value) {
   try {
     const content = fs.readFileSync(SETTING_FILE, 'utf8');
     const lines = content.split('\n');
-    let inSystemSection = false;
-    let updated = false;
-    const newLines = [];
+    
+    // 第一步：解析所有 section，收集 [system] 段的配置项
+    const sections = [];
+    let currentSection = null;
+    const systemConfigMap = new Map(); // 使用 Map 来存储唯一的 key-value
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trim();
       
-      if (trimmed === '[system]') {
-        inSystemSection = true;
-        newLines.push(line);
-        continue;
-      }
-      
       if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-        inSystemSection = false;
-        newLines.push(line);
+        // 保存之前的 section
+        if (currentSection) {
+          sections.push(currentSection);
+        }
+        
+        const sectionName = trimmed.substring(1, trimmed.length - 1);
+        currentSection = {
+          name: sectionName,
+          header: line,
+          items: []
+        };
+        
         continue;
       }
       
-      if (inSystemSection && trimmed && !trimmed.startsWith('#')) {
-        const match = trimmed.match(/^([^=]+)=(.+)$/);
-        if (match && match[1].trim() === key) {
-          // 更新现有配置
-          newLines.push(`${key}=${value}`);
-          updated = true;
-          continue;
+      if (currentSection) {
+        if (currentSection.name === 'system') {
+          // 对于 system 段，解析 key=value
+          if (trimmed && !trimmed.startsWith('#')) {
+            const match = trimmed.match(/^([^=]+)=(.+)$/);
+            if (match) {
+              const configKey = match[1].trim();
+              const configValue = match[2].trim();
+              // 后面的值覆盖前面的值
+              systemConfigMap.set(configKey, `${configKey}=${configValue}`);
+            } else {
+              // 非 key=value 的行（如空行、注释）保留
+              currentSection.items.push(line);
+            }
+          } else {
+            // 空行或注释也保留
+            currentSection.items.push(line);
+          }
+        } else {
+          // 非 system 段，直接保留所有行
+          currentSection.items.push(line);
         }
       }
-      
-      newLines.push(line);
     }
     
-    // 如果没有找到该配置项，添加到 [system] 小节末尾
-    if (!updated && inSystemSection) {
-      newLines.push(`${key}=${value}`);
-    } else if (!updated) {
-      // 如果不在任何小节中，添加到文件末尾
+    // 保存最后一个 section
+    if (currentSection) {
+      sections.push(currentSection);
+    }
+    
+    // 第二步：更新或添加配置项到 Map
+    systemConfigMap.set(key, `${key}=${value}`);
+    
+    // 第三步：重建文件内容
+    const newLines = [];
+    let systemSectionWritten = false;
+    
+    for (const section of sections) {
+      if (section.name === 'system') {
+        if (systemSectionWritten) {
+          // 跳过重复的 [system] 段
+          continue;
+        }
+        systemSectionWritten = true;
+        
+        newLines.push(section.header);
+        
+        // 先添加非 key=value 的行（注释、空行）
+        for (const item of section.items) {
+          newLines.push(item);
+        }
+        
+        // 然后添加所有配置项
+        for (const [configKey, configLine] of systemConfigMap) {
+          newLines.push(configLine);
+        }
+      } else {
+        newLines.push(section.header);
+        newLines.push(...section.items);
+      }
+    }
+    
+    // 如果没有找到 [system] 段，添加到末尾
+    if (!systemSectionWritten) {
+      if (newLines.length > 0 && newLines[newLines.length - 1].trim() !== '') {
+        newLines.push('');
+      }
       newLines.push('[system]');
       newLines.push(`${key}=${value}`);
     }
@@ -1028,7 +1083,18 @@ const server = http.createServer((req, res) => {
             logInfo(`✏️ Using provided name: ${name}`);
           }
           
-          const newLink = { id: generateIdFromUrl(url), name: name, url: url };
+          const newLinkId = generateIdFromUrl(url);
+          
+          // 检查该 URL 是否已经存在于当前 tab 中
+          const existingLink = targetTab.links.find(link => link.id === newLinkId);
+          if (existingLink) {
+            logInfo(`⚠️ Bookmark already exists: ${url}`);
+            res.statusCode = 409;
+            res.end(JSON.stringify({ code: 1, message: '网站已存在', duplicateUrl: url }));
+            return;
+          }
+          
+          const newLink = { id: newLinkId, name: name, url: url };
           // 如果有 note，也保存
           if (item.note) {
             newLink.note = item.note;

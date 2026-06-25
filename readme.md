@@ -14,6 +14,11 @@
 
 * 基于 node.js 和 普通 html，无需数据库的支持
 
+## 演示系统
+
+* https://mb.ostour.cn/
+
+
 ## 依赖
 
 * node.js 最低版本 v8.x 或者更高，推荐 v12.x LTS 或更高版本

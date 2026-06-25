@@ -35,6 +35,7 @@
                 cannotExtractName: '无法提取网站名称，请手动输入',
                 addSuccess: '添加成功',
                 addFailed: '添加失败：',
+                websiteExists: '网站已存在',
                 deleteSuccess: '删除成功',
                 saveSuccess: '保存成功',
                 saveFailed: '保存失败：',
@@ -182,6 +183,7 @@
                 cannotExtractName: 'Cannot extract website name, please enter manually',
                 addSuccess: 'Added successfully',
                 addFailed: 'Add failed: ',
+                websiteExists: 'Website already exists',
                 deleteSuccess: 'Deleted successfully',
                 saveSuccess: 'Saved successfully',
                 saveFailed: 'Save failed: ',
@@ -1457,6 +1459,14 @@
                     body: JSON.stringify({ name, url, note, tabId: currentTabId })
                 });
                 const result = await response.json();
+                
+                // 检查是否网站已存在
+                if (response.status === 409 || result.code === 1) {
+                    showToast(result.message || t('websiteExists'), 'warning');
+                    addBtn.classList.remove('loading');
+                    addBtn.disabled = false;
+                    return;
+                }
                 
                 closeAddModal();
                 loadLinks();
@@ -3535,7 +3545,7 @@
             select.innerHTML = `<option value="">${t('loadingDots')}</option>`;
             
             try {
-                const response = await fetch('https://mb.ostour.cn/api/siteCategories/open');
+                const response = await fetch('https://mb.ostour.cn/xapi/siteCategories/open');
                 const result = await response.json();
                 
                 if (result.code === 0 && result.data && result.data.length > 0) {
@@ -3579,7 +3589,7 @@
             tabSelectSection.style.display = 'none';
             
             try {
-                const response = await fetch(`https://mb.ostour.cn/api/siteInfo/${categoryId}/open`);
+                const response = await fetch(`https://mb.ostour.cn/xapi/siteInfo/${categoryId}/open`);
                 const result = await response.json();
                 
                 if (result.code === 0 && result.data) {
