@@ -2918,7 +2918,7 @@
         async function importChromeBookmarksFromString(htmlString, targetTabId) {
             try {
                 // 解析 HTML 并提取书签
-                const bookmarks = parseChromeBookmarksHTML(htmlString);
+                const bookmarks = parseChromeBookmarks(htmlString);
                 
                 if (!bookmarks || bookmarks.length === 0) {
                     showToast('未找到有效的书签数据', 'error');
