@@ -362,7 +362,7 @@
             try {
                 const newLockState = !isLockMode;
                 
-                console.log('toggleLockMode called, newLockState:', newLockState);
+                debugLog('toggleLockMode called, newLockState:', newLockState);
                 
                 // 重新获取最新的系统配置，确保 hasPassword 是最新的
                 try {
@@ -370,7 +370,7 @@
                     const result = await response.json();
                     if (result.code === 0) {
                         hasPassword = result.hasPassword || false;
-                        console.log('Current hasPassword status:', hasPassword);
+                        debugLog('Current hasPassword status:', hasPassword);
                     }
                 } catch (error) {
                     console.error('Failed to get system config:', error);
@@ -379,16 +379,16 @@
                 // 根据操作类型决定
                 if (newLockState) {
                     // 锁定时，总是显示密码对话框（可以设置新密码）
-                    console.log('Showing password modal for lock action');
+                    debugLog('Showing password modal for lock action');
                     showPasswordModal('lock', newLockState);
                 } else {
                     // 解锁时，如果有密码需要验证，如果没有密码直接解锁
                     if (hasPassword) {
-                        console.log('Showing password modal for unlock action');
+                        debugLog('Showing password modal for unlock action');
                         showPasswordModal('unlock', newLockState);
                     } else {
                         // 没有密码，直接解锁
-                        console.log('No password, applying lock state directly');
+                        debugLog('No password, applying lock state directly');
                         await applyLockState(newLockState);
                     }
                 }
@@ -400,13 +400,13 @@
         
         // 应用锁定状态
         async function applyLockState(lockState, newPassword = null) {
-            console.log('applyLockState called with lockState:', lockState, 'newPassword:', newPassword);
+            debugLog('applyLockState called with lockState:', lockState, 'newPassword:', newPassword);
             
             isLockMode = lockState;
             const lockBtn = document.getElementById('lockBtn');
             const importBtn = document.getElementById('importBtn');
             
-            console.log('isLockMode set to:', isLockMode);
+            debugLog('isLockMode set to:', isLockMode);
             
             if (isLockMode) {
                 // 进入锁定模式
@@ -436,18 +436,18 @@
                     saveData.password = newPassword;
                 }
                 
-                console.log('Saving system config:', saveData);
+                debugLog('Saving system config:', saveData);
                 await fetch('/api/saveSystemConfig', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(saveData)
                 });
-                console.log('System config saved');
+                debugLog('System config saved');
                 
                 // 更新 hasPassword 状态
                 if (newPassword !== null) {
                     hasPassword = newPassword.length > 0;
-                    console.log('hasPassword updated to:', hasPassword);
+                    debugLog('hasPassword updated to:', hasPassword);
                 }
             } catch (error) {
                 console.error('Failed to save lock state:', error);
@@ -456,25 +456,25 @@
             }
             
             // 重新加载选项卡以应用锁定状态
-            console.log('Reloading tabs and links');
+            debugLog('Reloading tabs and links');
             loadTabs();
             // 重新加载链接列表以应用锁定状态
             loadLinks();
-            console.log('applyLockState completed successfully');
+            debugLog('applyLockState completed successfully');
         }
         
         // 显示密码对话框
         function showPasswordModal(action, lockState) {
-            console.log('showPasswordModal called with action:', action, 'lockState:', lockState);
-            console.log('Before setting - pendingLockState:', pendingLockState);
+            debugLog('showPasswordModal called with action:', action, 'lockState:', lockState);
+            debugLog('Before setting - pendingLockState:', pendingLockState);
             
             passwordAction = action;
             pendingLockState = lockState;
             
-            console.log('After setting - pendingLockState:', pendingLockState);
+            debugLog('After setting - pendingLockState:', pendingLockState);
             
             const modal = document.getElementById('passwordModal');
-            console.log('Modal element:', modal);
+            debugLog('Modal element:', modal);
             
             if (!modal) {
                 console.error('Password modal not found!');
@@ -519,7 +519,7 @@
             
             toggleNewPasswordFields();
             modal.style.display = 'flex';
-            console.log('Modal display set to:', modal.style.display);
+            debugLog('Modal display set to:', modal.style.display);
         }
         
         // 切换旧密码字段显示（用于锁定对话框）
@@ -559,8 +559,8 @@
         
         // 确认密码操作
         async function confirmPasswordAction() {
-            console.log('confirmPasswordAction called, passwordAction:', passwordAction);
-            console.log('Current pendingLockState:', pendingLockState);
+            debugLog('confirmPasswordAction called, passwordAction:', passwordAction);
+            debugLog('Current pendingLockState:', pendingLockState);
             
             if (passwordAction === 'unlock') {
                 // 解锁操作：验证密码
@@ -580,7 +580,7 @@
                     const result = await response.json();
                     
                     if (result.code === 0 && result.valid) {
-                        console.log('Password verified, applying lock state:', pendingLockState);
+                        debugLog('Password verified, applying lock state:', pendingLockState);
                         const targetLockState = pendingLockState; // 保存 pendingLockState 的值
                         closePasswordModal();
                         await applyLockState(targetLockState);
@@ -593,12 +593,12 @@
                 }
             } else if (passwordAction === 'lock') {
                 // 锁定操作
-                console.log('Lock action, hasPassword:', hasPassword);
+                debugLog('Lock action, hasPassword:', hasPassword);
                 let newPassword = null;
                 
                 // 检查是否启用新密码
                 const enableNewPassword = document.getElementById('enableNewPasswordCheckbox').checked;
-                console.log('enableNewPassword:', enableNewPassword);
+                debugLog('enableNewPassword:', enableNewPassword);
                 
                 if (enableNewPassword) {
                     // 如果当前有密码，需要先验证旧密码
@@ -621,7 +621,7 @@
                                 showToast(t('oldPasswordIncorrect'), 'error');
                                 return;
                             }
-                            console.log('Old password verified successfully');
+                            debugLog('Old password verified successfully');
                         } catch (error) {
                             console.error('Verify old password error:', error);
                             showToast(t('passwordVerifyFailed'), 'error');
@@ -639,14 +639,14 @@
                     }
                     
                     newPassword = newPwd; // 可以是空字符串
-                    console.log('New password set (can be empty):', newPassword ? 'has value' : 'empty (will clear password)');
+                    debugLog('New password set (can be empty):', newPassword ? 'has value' : 'empty (will clear password)');
                 }
                 
-                console.log('Closing modal and applying lock state:', pendingLockState, 'newPassword:', newPassword);
+                debugLog('Closing modal and applying lock state:', pendingLockState, 'newPassword:', newPassword);
                 const targetLockState = pendingLockState; // 保存 pendingLockState 的值
                 closePasswordModal();
                 await applyLockState(targetLockState, newPassword);
-                console.log('applyLockState completed');
+                debugLog('applyLockState completed');
             }
         }
         
@@ -665,16 +665,16 @@
         // 加载常量配置
         async function loadConstants() {
             try {
-                console.log('Loading constants from API...');
+                debugLog('Loading constants from API...');
                 const response = await fetch('/api/getConstants');
-                console.log('Response status:', response.status);
+                debugLog('Response status:', response.status);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
                 const result = await response.json();
-                console.log('API result:', result);
+                debugLog('API result:', result);
                 
                 if (result.code !== 0) {
                     throw new Error(result.message || 'Failed to get constants');
@@ -684,16 +684,16 @@
                     version: result.version,
                     copyright: result.copyright
                 };
-                console.log('Constants loaded:', constants);
+                debugLog('Constants loaded:', constants);
                 
                 // 更新页脚版权信息
                 const footer = document.querySelector('.footer');
-                console.log('Footer element:', footer);
+                debugLog('Footer element:', footer);
                 
                 if (footer && constants.version && constants.copyright) {
                     // 只显示版权信息，不显示版本号
                     footer.textContent = constants.copyright;
-                    console.log('Footer updated');
+                    debugLog('Footer updated');
                 } else {
                     console.warn('Missing version or copyright in constants');
                 }
@@ -703,7 +703,7 @@
                 const footer = document.querySelector('.footer');
                 if (footer) {
                     footer.textContent = '(c) DSH-MyBookmark v1.0.0';
-                    console.log('Using default footer text');
+                    debugLog('Using default footer text');
                 }
             }
         }
@@ -717,6 +717,10 @@
                 if (result.code === 0) {
                     // 恢复锁定状态
                     hasPassword = result.hasPassword || false;
+                    
+                    // 加载调试模式状态
+                    isDebugMode = result.debug === true || result.debug === 'true';
+                    debugLog('Debug mode loaded:', isDebugMode);
                     
                     if (result.locked === true) {
                         isLockMode = true;
@@ -751,6 +755,14 @@
         let hasPassword = false; // 是否设置了密码
         let passwordAction = null; // 当前密码操作类型：'lock' 或 'unlock'
         let pendingLockState = false; // 待处理的锁定状态
+        let isDebugMode = false; // 调试模式状态
+
+        // 调试日志函数 - 只有在开启调试模式时才输出日志
+        function debugLog(...args) {
+            if (isDebugMode) {
+                console.log(...args);
+            }
+        }
 
         // 生成随机 ID（16位十六进制字符串）
         function generateRandomId() {
@@ -786,7 +798,7 @@
             let html = '';
             list.forEach(item => {
                 const favicon = getFaviconUrl(item);
-                console.log('Loading favicon for:', item.name, '(ID:', item.id, ')', '->', favicon);
+                debugLog('Loading favicon for:', item.name, '(ID:', item.id, ')', '->', favicon);
                 const iconClass = currentIconSize === 'small' ? 'small' : currentIconSize;
                 const smallIconMode = currentIconSize === 'small' ? 'small-icon-mode' : '';
                 const noIconClass = ''; // 不再使用 no-icon 类
@@ -851,7 +863,7 @@
             
             // 延迟5秒后刷新 favicon（通过重新设置 src 触发浏览器重新请求）
             setTimeout(() => {
-                console.log('Refreshing favicons after 5 seconds...');
+                debugLog('Refreshing favicons after 5 seconds...');
                 list.forEach(item => {
                     const card = document.querySelector(`.link-card[data-id="${item.id}"]`);
                     if (card) {
@@ -860,7 +872,7 @@
                             // 重新生成带新时间戳的 URL，触发浏览器重新请求
                             const newFaviconUrl = getFaviconUrl(item);
                             imgElement.src = newFaviconUrl;
-                            console.log('Refreshed favicon for:', item.name, '->', newFaviconUrl);
+                            debugLog('Refreshed favicon for:', item.name, '->', newFaviconUrl);
                         }
                     }
                 });
@@ -888,7 +900,7 @@
                 // 如果 currentTabId 为空，或者当前 ID 对应的 tab 不存在（比如首次打开时 default tab）
                 currentTabId = tabs[0].id;
                 localStorage.setItem('currentTabId', currentTabId);
-                console.log('Initialized currentTabId to:', currentTabId);
+                debugLog('Initialized currentTabId to:', currentTabId);
             }
             
             // 计算下一个 Tab 序号
@@ -1354,7 +1366,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tabIds })
                 });
-                console.log('Tab order saved');
+                debugLog('Tab order saved');
             } catch (error) {
                 console.error('Save tab order error:', error);
                 loadTabs();
@@ -1511,7 +1523,7 @@
                 // 返回 API 地址，使用 tabId 和 linkId 作为参数，添加时间戳
                 const timestamp = Date.now();
                 const faviconUrl = `/api/favicon/${currentTabId}/${item.id}?_ts=${timestamp}`;
-                console.log('Favicon URL for', item.name, '(ID:', item.id, '):', faviconUrl);
+                debugLog('Favicon URL for', item.name, '(ID:', item.id, '):', faviconUrl);
                 return faviconUrl;
             } catch (e) {
                 console.error('Error generating favicon URL:', e);
@@ -1611,7 +1623,7 @@
                     body: JSON.stringify({ id: currentEditId, name, url, note, tabId: currentTabId })
                 });
                 const result = await response.json();
-                console.log('Update result:', result);
+                debugLog('Update result:', result);
                 if (result.code === 0) {
                     closeEditModal();
                     loadLinks();
@@ -1647,23 +1659,23 @@
             try {
                 const res = await fetch('/api/get');
                 const data = await res.json();
-                console.log('loadTitle - API response:', { title: data.title, customTitle: data.customTitle });
+                debugLog('loadTitle - API response:', { title: data.title, customTitle: data.customTitle });
                 if (data.title) {
                     // 如果用户已自定义标题（customTitle === true），直接使用保存的标题，不进行语言切换
                     let displayTitle = data.title;
-                    console.log('loadTitle - customTitle check:', data.customTitle);
+                    debugLog('loadTitle - customTitle check:', data.customTitle);
                     if (!data.customTitle) {
                         // 只有未自定义时，才根据语言自动切换默认标题
-                        console.log('loadTitle - Auto-switching title based on language');
+                        debugLog('loadTitle - Auto-switching title based on language');
                         if (data.title === '我的收藏夹' && currentLanguage === 'en') {
                             displayTitle = t('defaultTitle');
-                            console.log('loadTitle - Switched to English:', displayTitle);
+                            debugLog('loadTitle - Switched to English:', displayTitle);
                         } else if (data.title === 'My Bookmark' && currentLanguage === 'zh') {
                             displayTitle = t('defaultTitle');
-                            console.log('loadTitle - Switched to Chinese:', displayTitle);
+                            debugLog('loadTitle - Switched to Chinese:', displayTitle);
                         }
                     } else {
-                        console.log('loadTitle - Using custom title (no auto-switch):', displayTitle);
+                        debugLog('loadTitle - Using custom title (no auto-switch):', displayTitle);
                     }
                     const toolbarTitleEl = document.getElementById('toolbarTitle');
                     if (toolbarTitleEl) {
@@ -1671,7 +1683,7 @@
                     }
                     // 同时更新页面 title 标签
                     document.title = displayTitle;
-                    console.log('loadTitle - Final title set to:', displayTitle);
+                    debugLog('loadTitle - Final title set to:', displayTitle);
                 }
             } catch (error) {
                 console.error('Load title error:', error);
@@ -1758,7 +1770,7 @@
                     },
                     body: JSON.stringify({ linkIds, tabId: currentTabId })
                 });
-                console.log('Order saved to server');
+                debugLog('Order saved to server');
             } catch (error) {
                 console.error('Save order error:', error);
                 // 如果保存失败，重新加载列表恢复原状
@@ -1779,7 +1791,7 @@
                     },
                     body: JSON.stringify({ iconSize: size })
                 });
-                console.log('Icon size changed to:', size);
+                debugLog('Icon size changed to:', size);
                 updateIconSizeButtons();
                 loadLinks(); // 重新加载以应用新样式
                 showToast(t('iconSizeChanged'), 'success');
@@ -2156,7 +2168,7 @@
                 }
                 
                 closeExportModal();
-                console.log('Data exported successfully');
+                debugLog('Data exported successfully');
                 showToast(t('exportSuccess'), 'success');
             } catch (error) {
                 console.error('Export error:', error);
@@ -2656,6 +2668,8 @@
             if (importType === 'chrome') {
                 chromeSection.style.display = 'block';
                 fileInput.accept = '.html,.htm';
+                // 加载选项卡列表并设置当前激活的选项卡为默认值
+                loadUnifiedImportTabSelect();
             } else {
                 chromeSection.style.display = 'none';
                 fileInput.accept = '.json';
@@ -2872,7 +2886,7 @@
                                     copyright: data.config.copyright
                                 })
                             });
-                            console.log('Config imported successfully');
+                            debugLog('Config imported successfully');
                         } catch (configError) {
                             console.error('Failed to import config:', configError);
                         }
@@ -2988,7 +3002,7 @@
                 
                 // 查找所有 <A> 标签，不仅限于 dt > a
                 const links = doc.querySelectorAll('a[href]');
-                console.log('Found', links.length, 'link elements in HTML');
+                debugLog('Found', links.length, 'link elements in HTML');
                 
                 links.forEach((link, index) => {
                     const href = link.getAttribute('href');
@@ -3001,7 +3015,7 @@
                             url: href
                         });
                         if (index < 3) {
-                            console.log('Parsed bookmark:', title, href);
+                            debugLog('Parsed bookmark:', title, href);
                         }
                     }
                 });
@@ -3015,13 +3029,13 @@
         // 导入 Chrome/Edge 书签
         async function importChromeBookmarks(file, targetTabId) {
             try {
-                console.log('Starting import of Chrome bookmarks file:', file.name);
+                debugLog('Starting import of Chrome bookmarks file:', file.name);
                 const text = await file.text();
-                console.log('File content length:', text.length);
-                console.log('First 200 chars:', text.substring(0, 200));
+                debugLog('File content length:', text.length);
+                debugLog('First 200 chars:', text.substring(0, 200));
                 
                 const bookmarks = parseChromeBookmarks(text);
-                console.log('Parsed', bookmarks.length, 'bookmarks');
+                debugLog('Parsed', bookmarks.length, 'bookmarks');
                 
                 if (bookmarks.length === 0) {
                     console.warn('No bookmarks found in file');
@@ -3084,15 +3098,15 @@
         // 导入 My Bookmark 数据（原有逻辑）
         async function importMyBookmarkData(file) {
             try {
-                console.log('Starting import of My Bookmark file:', file.name);
+                debugLog('Starting import of My Bookmark file:', file.name);
                 const text = await file.text();
-                console.log('File content length:', text.length);
-                console.log('First 200 chars:', text.substring(0, 200));
+                debugLog('File content length:', text.length);
+                debugLog('First 200 chars:', text.substring(0, 200));
                 
                 let data;
                 try {
                     data = JSON.parse(text);
-                    console.log('JSON parsed successfully');
+                    debugLog('JSON parsed successfully');
                 } catch (parseError) {
                     console.error('JSON parse error:', parseError);
                     showToast(t('importFailed') + 'JSON格式错误: ' + parseError.message, 'error');
@@ -3113,7 +3127,7 @@
                     itemCount = data.links.length;
                 }
                 
-                console.log('Found', itemCount, 'bookmarks to import');
+                debugLog('Found', itemCount, 'bookmarks to import');
                 
                 if (itemCount === 0) {
                     showToast('文件中没有找到可导入的书签', 'error');
@@ -3142,7 +3156,7 @@
                                 copyright: data.config.copyright
                             })
                         });
-                        console.log('Config imported successfully');
+                        debugLog('Config imported successfully');
                     } catch (configError) {
                         console.error('Failed to import config:', configError);
                         // 配置导入失败不影响书签导入
@@ -3324,7 +3338,7 @@
                         toolbarTitleEl.textContent = title;
                     }
                     document.title = title;
-                    console.log('Title saved');
+                    debugLog('Title saved');
                 }
                 
                 // 保存 config.json 配置（不包含端口）
@@ -3349,6 +3363,10 @@
                 
                 const systemConfigResult = await systemConfigResponse.json();
                 if (systemConfigResult.code === 0) {
+                    // 更新本地调试模式状态
+                    isDebugMode = debug;
+                    debugLog('Debug mode updated:', isDebugMode);
+                    
                     closeSettingsModal();
                     showToast(t('configSaved'), 'success', 5000);
                 } else {
