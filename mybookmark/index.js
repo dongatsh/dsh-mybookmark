@@ -820,8 +820,8 @@
                             <img src="${favicon}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
                         </div>
                         <div class="card-content">
-                            <div class="link-name">${item.name}</div>
-                            <div class="link-url"><a href="${item.url}" target="_blank">${item.url}</a></div>
+                            <div class="link-name" onclick="window.open('${item.url}','_blank')" title="${item.url}">${item.name}</div>
+                            <div class="link-url" title="${item.url}"><a href="${item.url}" target="_blank">${item.url}</a></div>
                             ${item.note ? `<div class="link-note">${item.note}</div>` : ''}
                         </div>
                         ${!isLocked ? `
@@ -846,8 +846,8 @@
                         <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center; cursor: pointer;" onclick="window.open('${item.url}','_blank')" title="${item.name}">
                             <img src="${favicon}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
                         </div>
-                        <div class="link-name">${item.name}</div>
-                        <div class="link-url"><a href="${item.url}" target="_blank">${item.url}</a></div>
+                        <div class="link-name" onclick="window.open('${item.url}','_blank')" title="${item.url}">${item.name}</div>
+                        <div class="link-url" title="${item.url}"><a href="${item.url}" target="_blank">${item.url}</a></div>
                         ${item.note ? `<div class="link-note">${item.note}</div>` : ''}
                         ${!isLocked ? `
                         <div class="card-actions">
