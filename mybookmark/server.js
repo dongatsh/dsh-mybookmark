@@ -414,8 +414,8 @@ function ensureUrlProtocol(url) {
   if (!url) return url;
   const trimmed = url.trim();
   // 如果已经有协议前缀，直接返回
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed;
+  if (trimmed.includes('://')) {
+      return trimmed;
   }
   // 如果没有协议，添加 https://
   return 'https://' + trimmed;

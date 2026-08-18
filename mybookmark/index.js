@@ -1426,11 +1426,11 @@
         function ensureUrlProtocol(url) {
             if (!url) return url;
             const trimmed = url.trim();
-            // 如果已经有协议前缀，直接返回
-            if (/^https?:\/\//i.test(trimmed)) {
+            // 如果已包含 :// 协议标识，直接返回
+            if (trimmed.includes('://')) {
                 return trimmed;
             }
-            // 如果没有协议，添加 https://
+            // 如果没有协议，在最前面添加 https://
             return 'https://' + trimmed;
         }
 
@@ -1605,7 +1605,7 @@
             
             // 确保URL有协议
             url = ensureUrlProtocol(url);
-            
+
             // 如果名称为空，不提取，让后端自动获取
             // 后端会从网站标题中提取，如果失败则使用域名
             
