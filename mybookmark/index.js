@@ -61,6 +61,7 @@
                 noOtherTab: '没有其他Tab可以移动',
                 enterTabName: '请输入选项卡名称：',
                 unknownError: '未知错误',
+                browserProtocolCopied: '浏览器内部协议地址已复制到剪贴板，请手动粘贴到地址栏打开',
                 confirmImport: '确定要导入',
                 bookmarks: '个收藏吗',
                 willMergeWithExisting: '这将与现有数据合并。',
@@ -209,6 +210,7 @@
                 noOtherTab: 'No other tabs to move to',
                 enterTabName: 'Enter tab name:',
                 unknownError: 'Unknown error',
+                browserProtocolCopied: 'Browser internal protocol URL copied to clipboard, please paste it in the address bar to open',
                 confirmImport: 'Are you sure to import',
                 bookmarks: 'bookmarks?',
                 willMergeWithExisting: 'This will merge with existing data.',
@@ -816,12 +818,12 @@
                         ${!isLocked ? `<button class="move-btn-icon" onclick="showMoveToTabModal('${item.id}')" title="${t('moveToOtherTab')}">⇄</button>` : ''}
                         ${!isLocked ? `<button class="lock-btn-icon" onclick="toggleLockCard('${item.id}', true)" title="${t('lockCard')}">🔓</button>` : ''}
                         ${isLocked ? `<button class="unlock-btn-icon" onclick="toggleLockCard('${item.id}', false)" title="${t('unlockCard')}">🔒</button>` : ''}
-                        <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center; cursor: pointer;" onclick="window.open('${item.url}','_blank')" title="${item.name}">
+                        <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center; cursor: pointer;" onclick="openWebsite('${item.url}')" title="${item.name}">
                             <img src="${favicon}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
                         </div>
                         <div class="card-content">
-                            <div class="link-name" onclick="window.open('${item.url}','_blank')" title="${item.url}">${item.name}</div>
-                            <div class="link-url" title="${item.url}"><a href="${item.url}" target="_blank">${item.url}</a></div>
+                            <div class="link-name" onclick="openWebsite('${item.url}')" title="${item.url}">${item.name}</div>
+                            <div class="link-url" title="${item.url}"><a href="${item.url}" target="_blank" onclick="event.preventDefault();openWebsite('${item.url}')">${item.url}</a></div>
                             ${item.note ? `<div class="link-note">${item.note}</div>` : ''}
                         </div>
                         ${!isLocked ? `
@@ -843,11 +845,11 @@
                         ${!isLocked ? `<button class="move-btn-icon" onclick="showMoveToTabModal('${item.id}')" title="${t('moveToOtherTab')}">⇄</button>` : ''}
                         ${!isLocked ? `<button class="lock-btn-icon" onclick="toggleLockCard('${item.id}', true)" title="${t('lockCard')}">🔓</button>` : ''}
                         ${isLocked ? `<button class="unlock-btn-icon" onclick="toggleLockCard('${item.id}', false)" title="${t('unlockCard')}">🔒</button>` : ''}
-                        <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center; cursor: pointer;" onclick="window.open('${item.url}','_blank')" title="${item.name}">
+                        <div class="link-icon ${iconClass}" style="background-size: cover; background-position: center; cursor: pointer;" onclick="openWebsite('${item.url}')" title="${item.name}">
                             <img src="${favicon}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">
                         </div>
-                        <div class="link-name" onclick="window.open('${item.url}','_blank')" title="${item.url}">${item.name}</div>
-                        <div class="link-url" title="${item.url}"><a href="${item.url}" target="_blank">${item.url}</a></div>
+                        <div class="link-name" onclick="openWebsite('${item.url}')" title="${item.url}">${item.name}</div>
+                        <div class="link-url" title="${item.url}"><a href="${item.url}" target="_blank" onclick="event.preventDefault();openWebsite('${item.url}')">${item.url}</a></div>
                         ${item.note ? `<div class="link-note">${item.note}</div>` : ''}
                         ${!isLocked ? `
                         <div class="card-actions">
@@ -1432,6 +1434,25 @@
             }
             // 如果没有协议，在最前面添加 https://
             return 'https://' + trimmed;
+        }
+
+        // 打开网站 - 根据协议类型区分处理方式
+        function openWebsite(url) {
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                // http/https 协议，在新标签页打开
+                window.open(url, '_blank');
+            } else if (url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('brave://') || url.startsWith('opera://')) {
+                // 浏览器内部协议，无法通过 JS 直接打开，复制到剪贴板
+                navigator.clipboard.writeText(url).then(() => {
+                    showToast(t('browserProtocolCopied'), 'info', 5000);
+                }).catch(() => {
+                    // 剪贴板 API 失败时，显示提示
+                    showToast(t('browserProtocolCopied') + ': ' + url, 'warning', 8000);
+                });
+            } else {
+                // 其他协议，在当前标签页导航
+                window.location.href = url;
+            }
         }
 
         // 保存添加的链接
