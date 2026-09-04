@@ -3365,7 +3365,6 @@
         
         // 选择分类
         function selectClassicCategory(id, name) {
-            document.getElementById('classicCategorySearch').value = name;
             document.getElementById('classicCategorySelect').value = id;
             
             // 更新选中状态（不隐藏结果列表）
