@@ -3285,32 +3285,107 @@
             showPrompt(title, defaultValue, callback);
         };
         
-        // 加载经典收藏分类列表
-        async function loadClassicCategories() {
-            const select = document.getElementById('classicCategorySelect');
-            select.innerHTML = `<option value="">${t('loadingDots')}</option>`;
+        // 经典收藏分类搜索相关变量
+        let categorySearchTimer = null;
+        let classicCategoryData = []; // 缓存当前搜索结果
+        
+        // 初始化经典收藏分类搜索界面
+        function loadClassicCategories() {
+            const searchInput = document.getElementById('classicCategorySearch');
+            const resultsDiv = document.getElementById('classicCategoryResults');
+            const hiddenInput = document.getElementById('classicCategorySelect');
+            
+            // 重置状态
+            searchInput.value = '';
+            resultsDiv.innerHTML = '';
+            hiddenInput.value = '';
+            classicCategoryData = [];
+            
+            // 初始加载所有分类（空关键词）
+            searchClassicCategories('');
+        }
+        
+        // 防抖搜索分类（300ms）
+        function debounceSearchCategories() {
+            if (categorySearchTimer) clearTimeout(categorySearchTimer);
+            categorySearchTimer = setTimeout(() => {
+                const keyword = document.getElementById('classicCategorySearch').value.trim();
+                // 清空已选分类
+                document.getElementById('classicCategorySelect').value = '';
+                document.getElementById('classicPreviewSection').style.display = 'none';
+                document.getElementById('unifiedImportTabSection').style.display = 'none';
+                const startBtn = document.getElementById('startImportBtn');
+                startBtn.disabled = true;
+                startBtn.style.opacity = '0.5';
+                startBtn.style.cursor = 'not-allowed';
+                searchClassicCategories(keyword);
+            }, 300);
+        }
+        
+        // 搜索经典收藏分类（带 keyword 参数）
+        async function searchClassicCategories(keyword) {
+            const resultsDiv = document.getElementById('classicCategoryResults');
+            resultsDiv.innerHTML = `<div style="grid-column: 1/-1;padding: 10px;text-align: center;color: #718096;">${t('loadingDots')}</div>`;
             
             try {
-                const response = await fetch('https://mb.ostour.cn/xapi/siteCategories/open');
+                const baseUrl = 'https://mb.ostour.cn/xapi/siteCategories/open';
+                const url = keyword ? `${baseUrl}?filter=${encodeURIComponent(keyword)}` : baseUrl;
+                const response = await fetch(url);
                 const result = await response.json();
                 
                 if (result.code === 0 && result.data && result.data.length > 0) {
-                    select.innerHTML = `<option value="">${t('selectCategoryPlaceholder')}</option>`;
-                    result.data.forEach(category => {
-                        const option = document.createElement('option');
-                        option.value = category.id;
-                        option.textContent = category.categoryName;
-                        select.appendChild(option);
+                    classicCategoryData = result.data;
+                    const selectedId = document.getElementById('classicCategorySelect').value;
+                    let html = '';
+                    result.data.forEach((category, index) => {
+                        const isSelected = category.id === selectedId;
+                        const bg = isSelected ? '#ebf8ff' : 'white';
+                        const border = isSelected ? '2px solid #4299e1' : '1px solid #e2e8f0';
+                        html += `<div data-index="${index}" onmousedown="event.preventDefault();selectClassicCategoryByIndex(${index})" style="padding: 8px 10px;cursor: pointer;font-size: 13px;color: #2d3748;background: ${bg};border: ${border};border-radius: 4px;display: flex;align-items: center;gap: 5px;transition: background 0.15s;" onmouseover="if(this.dataset.selected!=='true'){this.style.background='#edf2f7'}" onmouseout="if(this.dataset.selected!=='true'){this.style.background='${bg}'}">📁 <span style="overflow: hidden;text-overflow: ellipsis;white-space: nowrap;">${category.categoryName}</span></div>`;
                     });
+                    resultsDiv.innerHTML = html;
                 } else {
-                    select.innerHTML = `<option value="">${t('loadFailed')}</option>`;
-                    showToast(t('loadFailed'), 'error');
+                    classicCategoryData = [];
+                    resultsDiv.innerHTML = `<div style="grid-column: 1/-1;padding: 10px;text-align: center;color: #a0aec0;">${t('noCategoriesFound')}</div>`;
                 }
             } catch (error) {
-                console.error('Load classic categories error:', error);
-                select.innerHTML = `<option value="">${t('loadFailed')}</option>`;
-                showToast(t('loadFailed') + '：' + error.message, 'error');
+                debugLog('Search classic categories error:', error);
+                classicCategoryData = [];
+                resultsDiv.innerHTML = `<div style="grid-column: 1/-1;padding: 10px;text-align: center;color: #e53e3e;">${t('loadFailed')}</div>`;
             }
+        }
+        
+        // 通过索引选择分类（避免转义问题）
+        function selectClassicCategoryByIndex(index) {
+            const category = classicCategoryData[index];
+            if (category) {
+                selectClassicCategory(category.id, category.categoryName);
+            }
+        }
+        
+        // 选择分类
+        function selectClassicCategory(id, name) {
+            document.getElementById('classicCategorySearch').value = name;
+            document.getElementById('classicCategorySelect').value = id;
+            
+            // 更新选中状态（不隐藏结果列表）
+            const items = document.getElementById('classicCategoryResults').children;
+            for (let item of items) {
+                const idx = parseInt(item.dataset.index);
+                if (!isNaN(idx) && classicCategoryData[idx]) {
+                    if (classicCategoryData[idx].id === id) {
+                        item.style.background = '#ebf8ff';
+                        item.style.border = '2px solid #4299e1';
+                        item.dataset.selected = 'true';
+                    } else {
+                        item.style.background = 'white';
+                        item.style.border = '1px solid #e2e8f0';
+                        item.dataset.selected = 'false';
+                    }
+                }
+            }
+            
+            loadClassicBookmarks();
         }
         
         // 加载经典收藏内容
