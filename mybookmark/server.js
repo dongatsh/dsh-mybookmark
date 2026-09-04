@@ -998,10 +998,12 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // JavaScript 文件
-  if (pathname === '/index.js') {
+  // JavaScript 文件（index.js 以及语言包 lang_*.js）
+  if (pathname === '/index.js' || /^\/lang_[\w-]+\.js$/.test(pathname)) {
+    // 使用 path.basename 防止路径遍历，仅取文件名
+    const jsFileName = path.basename(pathname);
     res.setHeader('Content-Type', 'application/javascript;charset=utf-8');
-    fs.readFile(path.join(__dirname, 'index.js'), (err, content) => {
+    fs.readFile(path.join(__dirname, jsFileName), (err, content) => {
       if (err) {
         res.statusCode = 404;
         res.end('JavaScript file not found');
