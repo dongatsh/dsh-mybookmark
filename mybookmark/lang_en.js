@@ -79,6 +79,8 @@ window.i18nMessages['en'] = {
     copyright: 'Copyright',
     portNumber: 'Port Number',
     debugMode: 'Enable Debug Mode',
+    debugModeOn: 'Debug mode enabled',
+    debugModeOff: 'Debug mode disabled',
     restartRequired: '⚠️ Note: Port number cannot be modified here. To change it, please edit the config.json file and restart the service.',
     configSaved: 'Configuration saved! ',
     configSaveFailed: 'Failed to save configuration: ',

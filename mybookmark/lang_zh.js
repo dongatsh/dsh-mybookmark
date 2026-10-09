@@ -79,6 +79,8 @@ window.i18nMessages['zh'] = {
     copyright: '版权信息',
     portNumber: '端口号',
     debugMode: '开启调试模式',
+    debugModeOn: '调试模式开启',
+    debugModeOff: '调试模式关闭',
     restartRequired: '⚠️ 注意：端口号不可在此修改，如需修改请编辑 config.json 文件并重启服务。',
     configSaved: '配置保存成功！',
     configSaveFailed: '保存配置失败：',

@@ -3023,6 +3023,9 @@
                         document.getElementById('settingVersion').textContent = `v${constantsResult.version || '1.0.0'}`;
                     }
                     
+                    // 锁定模式下禁止修改标题和版权信息
+                    applySettingsLockState();
+                    
                     document.getElementById('settingsModal').style.display = 'flex';
                 } else {
                     showToast(t('getConfigFailed'), 'error');
@@ -3030,6 +3033,63 @@
             } catch (error) {
                 console.error('Get config error:', error);
                 showToast(t('getConfigFailed') + '：' + error.message, 'error');
+            }
+        }
+
+        // 根据锁定模式设置标题、版权信息输入框的可编辑状态
+        function applySettingsLockState() {
+            const inputs = [
+                document.getElementById('settingTitle'),
+                document.getElementById('settingCopyright')
+            ];
+            
+            inputs.forEach(input => {
+                if (!input) return;
+                if (isLockMode) {
+                    input.readOnly = true;
+                    input.style.backgroundColor = '#f7fafc';
+                    input.style.color = '#718096';
+                    input.style.cursor = 'not-allowed';
+                } else {
+                    input.readOnly = false;
+                    input.style.backgroundColor = '';
+                    input.style.color = '';
+                    input.style.cursor = '';
+                }
+            });
+            
+            // 锁定模式下隐藏"保存"按钮（调试模式开关仍允许操作，即时生效）
+            const saveBtn = document.getElementById('settingsSaveBtn');
+            if (saveBtn) {
+                saveBtn.style.display = isLockMode ? 'none' : '';
+            }
+        }
+
+        // 调试模式开关：立即生效，无需点击保存（锁定模式下也允许切换）
+        async function onDebugModeChange(checked) {
+            try {
+                const response = await fetch('/api/saveSystemConfig', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ debug: checked })
+                });
+                const result = await response.json();
+                
+                if (result.code === 0) {
+                    isDebugMode = checked;
+                    debugLog('Debug mode updated immediately:', isDebugMode);
+                    showToast(checked ? t('debugModeOn') : t('debugModeOff'), 'success');
+                } else {
+                    // 保存失败，回退复选框状态
+                    const debugCheckbox = document.getElementById('settingDebug');
+                    if (debugCheckbox) debugCheckbox.checked = !checked;
+                    showToast(t('configSaveFailed') + (result.message || t('unknownError')), 'error');
+                }
+            } catch (error) {
+                console.error('Save debug config error:', error);
+                const debugCheckbox = document.getElementById('settingDebug');
+                if (debugCheckbox) debugCheckbox.checked = !checked;
+                showToast(t('configSaveFailed') + error.message, 'error');
             }
         }
 
@@ -3080,6 +3140,12 @@
                 if (configResult.code !== 0) {
                     showToast(t('configSaveFailed') + (configResult.message || t('unknownError')), 'error');
                     return;
+                }
+                
+                // 立即更新页脚版权信息显示
+                const footer = document.querySelector('.footer');
+                if (footer) {
+                    footer.textContent = copyright;
                 }
                 
                 // 保存 system 配置 (debug)
