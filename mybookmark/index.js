@@ -522,8 +522,9 @@
                 console.error('Failed to load system config:', error);
             }
             
-            // 锁定状态判断：setting.ini 的 locked 时间戳与 localStorage 的 isLockMode 值比较
-            // 不相等 → 锁定；相等 → 解锁
+            // 锁定状态判断：
+            // 1. setting.ini 的 locked=0 时，表示未锁定
+            // 2. 否则，比较 locked 时间戳与 localStorage 的值：不相等 → 锁定；相等 → 解锁
             let localLockedTs = 0;
             try {
                 localLockedTs = Number(localStorage.getItem('locked')) || 0;
@@ -531,7 +532,12 @@
                 console.error('Failed to read lock state from localStorage:', error);
             }
             
-            isLockMode = serverLockedTs !== localLockedTs;
+            if (serverLockedTs === 0) {
+                // locked=0 表示未锁定
+                isLockMode = false;
+            } else {
+                isLockMode = serverLockedTs !== localLockedTs;
+            }
             debugLog('Lock mode: serverLockedTs=', serverLockedTs, ', localLockedTs=', localLockedTs, ', final=', isLockMode);
             
             if (isLockMode) {
