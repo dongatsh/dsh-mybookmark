@@ -341,12 +341,19 @@
             
             <!-- 锁定模式说明信息 -->
             <div id="lockDescriptionSection" style="display: none;margin-bottom: 15px;padding: 10px;background-color: #f7fafc;border-left: 3px solid #4299e1;border-radius: 4px;">
-                <p style="margin: 0;color: #4a5568;font-size: 14px;line-height: 1.6;" data-i18n="lockModeDescription">设置锁定模式后系统将不允许修改选项卡和网站，可设置密码则解锁时需验证</p>
+                <p style="margin: 0;color: #4a5568;font-size: 14px;line-height: 1.6;" data-i18n="lockModeDescription">设置锁定模式后系统将不允许修改选项卡和网站，必须设置密码，解锁时需验证密码</p>
             </div>
             
             <div style="margin-bottom: 15px;">
                 <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" id="passwordInputLabel" data-i18n="passwordPlaceholder">密码：</label>
                 <input type="password" class="modal-input" id="passwordInput" data-i18n-placeholder="passwordPlaceholder" placeholder="请输入密码">
+            </div>
+            
+            <div id="clearPasswordSection" style="display: none;margin-bottom: 15px;">
+                <label style="display: flex;align-items: center;gap: 8px;cursor: pointer;">
+                    <input type="checkbox" id="clearPasswordOnUnlockCheckbox">
+                    <span data-i18n="clearPasswordOnUnlock">解锁时同时清除密码</span>
+                </label>
             </div>
             
             <div id="enableNewPasswordSection" style="display: none;margin-bottom: 15px;">
@@ -363,8 +370,8 @@
             
             <div id="newPasswordSection" style="display: none;">
                 <div style="margin-bottom: 15px;">
-                    <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" data-i18n="newPasswordPlaceholder">新密码（可选）：</label>
-                    <input type="password" class="modal-input" id="newPasswordInput" data-i18n-placeholder="newPasswordPlaceholder" placeholder="留空则不设置密码">
+                    <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" data-i18n="newPasswordPlaceholder">新密码：</label>
+                    <input type="password" class="modal-input" id="newPasswordInput" data-i18n-placeholder="newPasswordPlaceholder" placeholder="请输入新密码">
                 </div>
                 <div style="margin-bottom: 15px;">
                     <label style="display: block;margin-bottom: 8px;color: #4a5568;font-weight: bold;" data-i18n="confirmPasswordPlaceholder">确认新密码：</label>

@@ -1768,7 +1768,7 @@ const server = http.createServer((req, res) => {
       res.end(JSON.stringify({ 
         code: 0, 
         debug: systemConfig.debug === 'true',
-        locked: systemConfig.locked === 'true',
+        locked: Number(systemConfig.locked) || 0,
         hasPassword: !!systemConfig.password // 是否有密码
       }));
     } catch (err) {
@@ -1896,9 +1896,9 @@ const server = http.createServer((req, res) => {
           debugLog('Password changed from old to new');
         }
         
-        // 将 locked 设置保存到 setting.ini
+        // 将 locked 设置保存到 setting.ini（数字时间戳，0 表示未锁定）
         if (locked !== undefined) {
-          writeSystemConfig('locked', locked === true || locked === 'true' ? 'true' : 'false');
+          writeSystemConfig('locked', String(Number(locked) || 0));
         }
         
         debugLog('System config saved successfully');

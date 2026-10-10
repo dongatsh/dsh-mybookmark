@@ -96,9 +96,19 @@
                         debugLog('Showing password modal for unlock action');
                         showPasswordModal('unlock', newLockState);
                     } else {
-                        // 没有密码，直接解锁
+                        // 没有密码，直接解锁：先获取服务器端 locked 时间戳
                         debugLog('No password, applying lock state directly');
-                        await applyLockState(newLockState);
+                        let serverLockedTs = 0;
+                        try {
+                            const cfgRes = await fetch('/api/getSystemConfig');
+                            const cfgResult = await cfgRes.json();
+                            if (cfgResult.code === 0) {
+                                serverLockedTs = Number(cfgResult.locked) || 0;
+                            }
+                        } catch (e) {
+                            console.error('Failed to fetch server locked timestamp:', e);
+                        }
+                        await applyLockState(newLockState, null, false, serverLockedTs);
                     }
                 }
             } catch (error) {
@@ -108,8 +118,10 @@
         }
         
         // 应用锁定状态
-        async function applyLockState(lockState, newPassword = null) {
-            debugLog('applyLockState called with lockState:', lockState, 'newPassword:', newPassword);
+        // lockedTs: 锁定时为当前时间戳，解锁时为服务器端 locked 值（使 localStorage 与服务器一致）
+        // clearPassword: 解锁时若为 true，则同时清除密码并将 setting.ini 的 locked 置为 0
+        async function applyLockState(lockState, newPassword = null, clearPassword = false, lockedTs = 0) {
+            debugLog('applyLockState called with lockState:', lockState, 'newPassword:', newPassword, 'clearPassword:', clearPassword, 'lockedTs:', lockedTs);
             
             isLockMode = lockState;
             const lockBtn = document.getElementById('lockBtn');
@@ -136,32 +148,54 @@
                 importBtn.style.cursor = 'pointer';
             }
             
-            // 保存锁定状态到服务器
+            // 锁定状态写入当前浏览器的 localStorage，实现每个浏览器独立解锁
+            // 锁定时写 0（与服务器时间戳不等 → 锁定）；解锁时写服务器时间戳（相等 → 解锁）
             try {
-                const saveData = { locked: isLockMode };
-                
-                // 如果有新密码，一并保存
-                if (newPassword !== null) {
-                    saveData.password = newPassword;
-                }
-                
-                debugLog('Saving system config:', saveData);
-                await fetch('/api/saveSystemConfig', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(saveData)
-                });
-                debugLog('System config saved');
-                
-                // 更新 hasPassword 状态
-                if (newPassword !== null) {
-                    hasPassword = newPassword.length > 0;
-                    debugLog('hasPassword updated to:', hasPassword);
-                }
+                const localValue = isLockMode ? 0 : lockedTs;
+                localStorage.setItem('locked', String(localValue));
+                debugLog('Lock state saved to localStorage:', localValue);
             } catch (error) {
-                console.error('Failed to save lock state:', error);
-                showToast(t('passwordVerifyFailed'), 'error');
-                return;
+                console.error('Failed to save lock state to localStorage:', error);
+            }
+            
+            // 锁定时同步写入 setting.ini（locked=时间戳）；解锁时只改 localStorage，不写服务器
+            // 例外：解锁时若勾选了“清除密码”，则向服务器提交 locked=0 并清空密码
+            // 密码为全局配置，设置新密码时一并写入服务器
+            const saveData = {};
+            if (isLockMode) {
+                saveData.locked = lockedTs;
+            } else if (clearPassword) {
+                // 解锁并清除密码：将 setting.ini 的 locked 改为 0，并清空密码
+                saveData.locked = 0;
+                saveData.password = '';
+            }
+            if (newPassword !== null) {
+                saveData.password = newPassword;
+            }
+            
+            if (Object.keys(saveData).length > 0) {
+                try {
+                    debugLog('Saving system config:', { locked: saveData.locked, hasPassword: saveData.password !== undefined });
+                    await fetch('/api/saveSystemConfig', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(saveData)
+                    });
+                    debugLog('System config saved');
+                    
+                    // 更新 hasPassword 状态
+                    if (newPassword !== null) {
+                        hasPassword = newPassword.length > 0;
+                        debugLog('hasPassword updated to:', hasPassword);
+                    } else if (clearPassword) {
+                        hasPassword = false;
+                        debugLog('hasPassword cleared');
+                    }
+                } catch (error) {
+                    console.error('Failed to save system config:', error);
+                    showToast(t('passwordVerifyFailed'), 'error');
+                    return;
+                }
             }
             
             // 重新加载选项卡以应用锁定状态
@@ -198,6 +232,8 @@
             const enableNewPasswordCheckbox = document.getElementById('enableNewPasswordCheckbox');
             const unlockDescriptionSection = document.getElementById('unlockDescriptionSection');
             const lockDescriptionSection = document.getElementById('lockDescriptionSection');
+            const clearPasswordSection = document.getElementById('clearPasswordSection');
+            const clearPasswordOnUnlockCheckbox = document.getElementById('clearPasswordOnUnlockCheckbox');
             
             // 清空输入框
             document.getElementById('oldPasswordInput').value = '';
@@ -205,16 +241,27 @@
             document.getElementById('newPasswordInput').value = '';
             document.getElementById('confirmPasswordInput').value = '';
             enableNewPasswordCheckbox.checked = false;
+            clearPasswordOnUnlockCheckbox.checked = false; // 缺省不勾选“解锁时同时清除密码”
             
             if (action === 'lock') {
-                // 锁定操作：默认只显示"启用新密码"复选框
+                // 锁定操作
                 title.textContent = t('lockTitle');
                 unlockDescriptionSection.style.display = 'none';
                 lockDescriptionSection.style.display = 'block';
-                oldPasswordSection.style.display = 'none';
                 passwordInputSection.style.display = 'none';
-                enableNewPasswordSection.style.display = 'block';
-                newPasswordSection.style.display = 'none';
+                clearPasswordSection.style.display = 'none';
+                
+                if (hasPassword) {
+                    // 已有密码：显示"启用新密码"复选框，默认不勾选可直接锁定
+                    enableNewPasswordSection.style.display = 'block';
+                    newPasswordSection.style.display = 'none';
+                    oldPasswordSection.style.display = 'none';
+                } else {
+                    // 无密码：必须设置密码
+                    enableNewPasswordSection.style.display = 'none';
+                    newPasswordSection.style.display = 'block';
+                    oldPasswordSection.style.display = 'none';
+                }
             } else {
                 // 解锁操作
                 title.textContent = t('unlockTitle');
@@ -224,9 +271,9 @@
                 passwordInputSection.style.display = 'block'; // 显示通用密码输入框
                 enableNewPasswordSection.style.display = 'none';
                 newPasswordSection.style.display = 'none';
+                clearPasswordSection.style.display = 'block'; // 解锁时显示“清除密码”选项
             }
             
-            toggleNewPasswordFields();
             modal.style.display = 'flex';
             debugLog('Modal display set to:', modal.style.display);
         }
@@ -291,8 +338,21 @@
                     if (result.code === 0 && result.valid) {
                         debugLog('Password verified, applying lock state:', pendingLockState);
                         const targetLockState = pendingLockState; // 保存 pendingLockState 的值
+                        const clearPassword = document.getElementById('clearPasswordOnUnlockCheckbox').checked;
+                        debugLog('clearPasswordOnUnlock:', clearPassword);
                         closePasswordModal();
-                        await applyLockState(targetLockState);
+                        // 解锁：先获取服务器端 locked 时间戳，使 localStorage 与之相等
+                        let serverLockedTs = 0;
+                        try {
+                            const cfgRes = await fetch('/api/getSystemConfig');
+                            const cfgResult = await cfgRes.json();
+                            if (cfgResult.code === 0) {
+                                serverLockedTs = Number(cfgResult.locked) || 0;
+                            }
+                        } catch (e) {
+                            console.error('Failed to fetch server locked timestamp:', e);
+                        }
+                        await applyLockState(targetLockState, null, clearPassword, serverLockedTs);
                     } else {
                         showToast(result.message || t('passwordVerifyFailed'), 'error');
                     }
@@ -305,13 +365,13 @@
                 debugLog('Lock action, hasPassword:', hasPassword);
                 let newPassword = null;
                 
-                // 检查是否启用新密码
-                const enableNewPassword = document.getElementById('enableNewPasswordCheckbox').checked;
-                debugLog('enableNewPassword:', enableNewPassword);
-                
-                if (enableNewPassword) {
-                    // 如果当前有密码，需要先验证旧密码
-                    if (hasPassword) {
+                if (hasPassword) {
+                    // 已有密码：检查是否勾选了"启用新密码"
+                    const enableNewPassword = document.getElementById('enableNewPasswordCheckbox').checked;
+                    debugLog('enableNewPassword:', enableNewPassword);
+                    
+                    if (enableNewPassword) {
+                        // 验证旧密码
                         const oldPassword = document.getElementById('oldPasswordInput').value;
                         if (!oldPassword) {
                             showToast(t('enterPassword'), 'warning');
@@ -336,25 +396,48 @@
                             showToast(t('passwordVerifyFailed'), 'error');
                             return;
                         }
+                        
+                        const newPwd = document.getElementById('newPasswordInput').value;
+                        const confirmPwd = document.getElementById('confirmPasswordInput').value;
+                        
+                        if (!newPwd) {
+                            showToast(t('passwordRequired'), 'warning');
+                            return;
+                        }
+                        
+                        if (newPwd !== confirmPwd) {
+                            showToast(t('passwordsNotMatch'), 'error');
+                            return;
+                        }
+                        
+                        newPassword = newPwd;
+                        debugLog('New password set');
                     }
-                    
+                    // else: 未勾选，newPassword 保持 null，直接锁定
+                } else {
+                    // 无密码：必须设置密码
                     const newPwd = document.getElementById('newPasswordInput').value;
                     const confirmPwd = document.getElementById('confirmPasswordInput').value;
                     
-                    // 新密码可以为空（表示清除密码）
+                    if (!newPwd) {
+                        showToast(t('passwordRequired'), 'warning');
+                        return;
+                    }
+                    
                     if (newPwd !== confirmPwd) {
                         showToast(t('passwordsNotMatch'), 'error');
                         return;
                     }
                     
-                    newPassword = newPwd; // 可以是空字符串
-                    debugLog('New password set (can be empty):', newPassword ? 'has value' : 'empty (will clear password)');
+                    newPassword = newPwd;
+                    debugLog('New password set (first time)');
                 }
                 
-                debugLog('Closing modal and applying lock state:', pendingLockState, 'newPassword:', newPassword);
+                debugLog('Closing modal and applying lock state:', pendingLockState, 'newPassword:', newPassword !== null ? 'has value' : 'null');
                 const targetLockState = pendingLockState; // 保存 pendingLockState 的值
+                const lockTimestamp = Date.now(); // 生成当前时间戳作为锁定标记
                 closePasswordModal();
-                await applyLockState(targetLockState, newPassword);
+                await applyLockState(targetLockState, newPassword, false, lockTimestamp);
                 debugLog('applyLockState completed');
             }
         }
@@ -417,36 +500,51 @@
             }
         }
 
-        // 加载系统配置（包括锁定状态）
+        // 加载系统配置（密码、调试模式来自服务器；锁定状态通过时间戳比较判断）
         async function loadSystemConfig() {
+            let serverLockedTs = 0;
             try {
                 const response = await fetch('/api/getSystemConfig');
                 const result = await response.json();
                 
                 if (result.code === 0) {
-                    // 恢复锁定状态
                     hasPassword = result.hasPassword || false;
                     
                     // 加载调试模式状态
                     isDebugMode = result.debug === true || result.debug === 'true';
                     debugLog('Debug mode loaded:', isDebugMode);
                     
-                    if (result.locked === true) {
-                        isLockMode = true;
-                        const lockBtn = document.getElementById('lockBtn');
-                        const importBtn = document.getElementById('importBtn');
-                        
-                        // 更新按钮状态
-                        lockBtn.textContent = '🔒';
-                        lockBtn.setAttribute('data-i18n-title', 'unlockMode');
-                        lockBtn.title = t('unlockMode');
-                        importBtn.disabled = true;
-                        importBtn.style.opacity = '0.5';
-                        importBtn.style.cursor = 'not-allowed';
-                    }
+                    // 读取服务器端锁定时间戳（setting.ini 的 locked，数字类型）
+                    serverLockedTs = Number(result.locked) || 0;
+                    debugLog('Server locked timestamp loaded:', serverLockedTs);
                 }
             } catch (error) {
                 console.error('Failed to load system config:', error);
+            }
+            
+            // 锁定状态判断：setting.ini 的 locked 时间戳与 localStorage 的 isLockMode 值比较
+            // 不相等 → 锁定；相等 → 解锁
+            let localLockedTs = 0;
+            try {
+                localLockedTs = Number(localStorage.getItem('locked')) || 0;
+            } catch (error) {
+                console.error('Failed to read lock state from localStorage:', error);
+            }
+            
+            isLockMode = serverLockedTs !== localLockedTs;
+            debugLog('Lock mode: serverLockedTs=', serverLockedTs, ', localLockedTs=', localLockedTs, ', final=', isLockMode);
+            
+            if (isLockMode) {
+                const lockBtn = document.getElementById('lockBtn');
+                const importBtn = document.getElementById('importBtn');
+                
+                // 更新按钮状态
+                lockBtn.textContent = '🔒';
+                lockBtn.setAttribute('data-i18n-title', 'unlockMode');
+                lockBtn.title = t('unlockMode');
+                importBtn.disabled = true;
+                importBtn.style.opacity = '0.5';
+                importBtn.style.cursor = 'not-allowed';
             }
         }
 
