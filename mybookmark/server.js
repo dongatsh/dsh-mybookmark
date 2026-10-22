@@ -87,7 +87,7 @@ function readFaviconFailures() {
       }
       
       if (inFaviconSection && trimmed && !trimmed.startsWith('#')) {
-        const match = trimmed.match(/^([^=]+)=(.+)$/);
+        const match = trimmed.match(/^([^=]+)=(.*)$/);
         if (match) {
           const domain = match[1].trim();
           const date = match[2].trim();
@@ -129,7 +129,7 @@ function writeFaviconFailure(domain, date) {
       }
       
       if (inFaviconSection && trimmed && !trimmed.startsWith('#')) {
-        const match = trimmed.match(/^([^=]+)=(.+)$/);
+        const match = trimmed.match(/^([^=]+)=(.*)$/);
         if (match && match[1].trim() === domain) {
           // 更新现有记录
           newLines.push(`${domain}=${date}`);
@@ -188,7 +188,7 @@ function readSystemConfig() {
       }
       
       if (inSystemSection && trimmed && !trimmed.startsWith('#')) {
-        const match = trimmed.match(/^([^=]+)=(.+)$/);
+        const match = trimmed.match(/^([^=]+)=(.*)$/);
         if (match) {
           const key = match[1].trim();
           const value = match[2].trim();
@@ -239,7 +239,7 @@ function writeSystemConfig(key, value) {
         if (currentSection.name === 'system') {
           // 对于 system 段，解析 key=value
           if (trimmed && !trimmed.startsWith('#')) {
-            const match = trimmed.match(/^([^=]+)=(.+)$/);
+            const match = trimmed.match(/^([^=]+)=(.*)$/);
             if (match) {
               const configKey = match[1].trim();
               const configValue = match[2].trim();
@@ -1768,7 +1768,7 @@ const server = http.createServer((req, res) => {
       res.end(JSON.stringify({ 
         code: 0, 
         debug: systemConfig.debug === 'true',
-        locked: systemConfig.locked === 'true',
+        locked: Number(systemConfig.locked) || 0,
         hasPassword: !!systemConfig.password // 是否有密码
       }));
     } catch (err) {
@@ -1896,9 +1896,11 @@ const server = http.createServer((req, res) => {
           debugLog('Password changed from old to new');
         }
         
-        // 将 locked 设置保存到 setting.ini
+        // 将 locked 设置保存到 setting.ini（数字时间戳，0 表示未锁定）
         if (locked !== undefined) {
-          writeSystemConfig('locked', locked === true || locked === 'true' ? 'true' : 'false');
+          // 如果 locked 为 true，使用当前时间的时间戳；否则使用传入的值或 0
+          const lockedValue = locked === true ? Date.now() : (Number(locked) || 0);
+          writeSystemConfig('locked', String(lockedValue));
         }
         
         debugLog('System config saved successfully');
